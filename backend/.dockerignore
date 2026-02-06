@@ -1,0 +1,85 @@
+# Dependencies
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build output
+.next
+out
+dist
+build
+
+# Environment files
+.env
+.env*.local
+.env.development
+.env.production
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git
+.gitignore
+
+# Testing
+coverage
+.nyc_output
+
+# Runtime data / caches
+data
+qdrant_storage
+tmp
+tmp_marker_out
+
+# Local artifacts
+*.db
+*.sqlite
+*.sqlite3
+
+# Docs and other non-build assets
+docs
+frontend-new
+tests
+# scripts - needed for worker
+
+# Misc
+*.log
+*.log.*
+*.tmp
+*.cache
+*.md
+!README.md
+
+# Development tools
+.playwright-mcp
+.serena
+logs
+.claude
+
+# Additional exclusions
+*.pyc
+__pycache__
+.pnpm-store
+.turbo
+.vite
+
+# Old backups
+*_bak*
+*backup*
+
+# Test files
+test*.pdf
+test*.docx
+test*.pptx
+*.pdf
+*.docx
+*.pptx

@@ -1,0 +1,30 @@
+# 减少上下文噪音
+node_modules/
+.next/
+out/
+build/
+dist/
+*.log
+.logs/
+tmp/
+tmp_*/
+*.tmp
+
+# 开发文件
+.DS_Store
+.vscode/
+.idea/
+
+# Git
+.git/
+.svn/
+
+# 数据缓存
+data/
+qdrant_storage/
+
+# Claude 相关
+.claude/
+
+# 归档文档
+docs/archive/

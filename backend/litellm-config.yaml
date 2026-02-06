@@ -1,0 +1,91 @@
+# LiteLLM Proxy Server Configuration
+model_list:
+  - model_name: qwen3-embedding-4b
+    litellm_params:
+      model: openai/Qwen/Qwen3-Embedding-4B
+      api_key: os.environ/SILICONFLOW_API_KEY
+      api_base: https://api.siliconflow.cn/v1
+    model_info:
+      mode: embedding
+
+  - model_name: qwen3-reranker-4b
+    litellm_params:
+      model: jina_ai/Qwen/Qwen3-Reranker-4B
+      api_key: os.environ/SILICONFLOW_API_KEY
+      api_base: https://api.siliconflow.cn/v1
+    model_info:
+      mode: rerank
+
+  - model_name: qwen-flash
+    litellm_params:
+      model: openai/qwen-flash
+      api_key: os.environ/DASHSCOPE_API_KEY
+      api_base: https://dashscope.aliyuncs.com/compatible-mode/v1
+
+  - model_name: qwen-flash-2025-07-28
+    litellm_params:
+      model: openai/qwen-flash-2025-07-28
+      api_key: os.environ/DASHSCOPE_API_KEY
+      api_base: https://dashscope.aliyuncs.com/compatible-mode/v1
+
+  - model_name: qwen3-max
+    litellm_params:
+      model: openai/qwen3-max
+      api_key: os.environ/DASHSCOPE_API_KEY
+      api_base: https://dashscope.aliyuncs.com/compatible-mode/v1
+
+  - model_name: qwen3-vl-flash
+    litellm_params:
+      model: openai/qwen3-vl-flash
+      api_key: os.environ/DASHSCOPE_API_KEY
+      api_base: https://dashscope.aliyuncs.com/compatible-mode/v1
+
+  - model_name: qwen-vl-ocr-2025-11-20
+    litellm_params:
+      model: openai/qwen-vl-ocr-2025-11-20
+      api_key: os.environ/DASHSCOPE_API_KEY
+      api_base: https://dashscope.aliyuncs.com/compatible-mode/v1
+
+  - model_name: deepseek-chat
+    litellm_params:
+      model: openai/deepseek-chat
+      api_key: os.environ/DEEPSEEK_API_KEY
+      api_base: https://api.deepseek.com/v1
+
+  - model_name: deepseek-reasoner
+    litellm_params:
+      model: openai/deepseek-reasoner
+      api_key: os.environ/DEEPSEEK_API_KEY
+      api_base: https://api.deepseek.com/v1
+
+  - model_name: Pro/deepseek-ai/DeepSeek-V3.2
+    litellm_params:
+      model: openai/Pro/deepseek-ai/DeepSeek-V3.2
+      api_key: os.environ/SILICONFLOW_API_KEY
+      api_base: https://api.siliconflow.cn/v1
+
+  - model_name: deepseek-ocr
+    litellm_params:
+      model: openai/deepseek-ai/DeepSeek-OCR
+      api_key: os.environ/SILICONFLOW_API_KEY
+      api_base: https://api.siliconflow.cn/v1
+
+  - model_name: qwen3-vl-32b
+    litellm_params:
+      model: openai/Qwen/Qwen3-VL-32B-Instruct
+      api_key: os.environ/SILICONFLOW_API_KEY
+      api_base: https://api.siliconflow.cn/v1
+
+  - model_name: zai-org/GLM-4.6V
+    litellm_params:
+      model: openai/zai-org/GLM-4.6V
+      api_key: os.environ/SILICONFLOW_API_KEY
+      api_base: https://api.siliconflow.cn/v1
+
+litellm_settings:
+  num_retries: 2
+  fallbacks:
+    - qwen-flash:
+        - qwen-flash-2025-07-28
+  set_verbose: false
+  drop_params: true

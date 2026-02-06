@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OneAPI 渠道配置指南</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.6;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      border-radius: 8px;
+      padding: 30px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+      border-bottom: 3px solid #4CAF50;
+      padding-bottom: 10px;
+    }
+    h2 {
+      color: #444;
+      margin-top: 30px;
+    }
+    .channel-card {
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+      background: #fafafa;
+    }
+    .channel-card h3 {
+      color: #4CAF50;
+      margin-top: 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 15px 0;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 12px;
+      text-align: left;
+    }
+    th {
+      background: #4CAF50;
+      color: white;
+    }
+    tr:nth-child(even) {
+      background: #f9f9f9;
+    }
+    .highlight {
+      background: #fff3cd;
+      padding: 15px;
+      border-left: 4px solid #ffc107;
+      margin: 15px 0;
+    }
+    .success {
+      background: #d4edda;
+      padding: 15px;
+      border-left: 4px solid #28a745;
+      margin: 15px 0;
+    }
+    code {
+      background: #f4f4f4;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: "Courier New", monospace;
+    }
+    pre {
+      background: #f4f4f4;
+      padding: 15px;
+      border-radius: 5px;
+      overflow-x: auto;
+    }
+    .step {
+      counter-increment: step-counter;
+      margin: 20px 0;
+    }
+    .step::before {
+      content: counter(step-counter);
+      background: #4CAF50;
+      color: white;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      display: inline-block;
+      text-align: center;
+      line-height: 30px;
+      margin-right: 10px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🚀 OneAPI 渠道配置详细指南</h1>
+
+    <div class="highlight">
+      <strong>⚠️ 重要说明：</strong> 在 OneAPI 中，配置 Base URL 的位置取决于你选择的"渠道类型"。
+    </div>
+
+    <h2>📋 配置步骤</h2>
+
+    <div class="step">
+      <h3>访问管理后台</h3>
+      <p>打开浏览器访问：<a href="http://localhost:3000" target="_blank">http://localhost:3000</a></p>
+      <p>登录账号：<code>root</code> / 密码：<code>123456</code></p>
+    </div>
+
+    <div class="step">
+      <h3>进入渠道管理</h3>
+      <p>点击左侧菜单的 <strong>"渠道"</strong></p>
+    </div>
+
+    <div class="step">
+      <h3>点击新建渠道</h3>
+      <p>点击右上角的 <strong>"新建渠道"</strong> 按钮</p>
+    </div>
+
+    <div class="step">
+      <h3>填写渠道配置</h3>
+      <p>根据不同的渠道类型，配置方式如下：</p>
+
+      <div class="channel-card">
+        <h3>渠道 1: DeepSeek Chat</h3>
+        <table>
+          <tr>
+            <th>配置项</th>
+            <th>值</th>
+            <th>说明</th>
+          </tr>
+          <tr>
+            <td><strong>渠道类型</strong></td>
+            <td><code>OpenAI</code></td>
+            <td>从下拉菜单选择</td>
+          </tr>
+          <tr>
+            <td><strong>名称</strong></td>
+            <td><code>DeepSeek-Chat</code></td>
+            <td>自定义名称</td>
+          </tr>
+          <tr>
+            <td><strong>Base URL</strong></td>
+            <td><code>https://api.deepseek.com/v1</code></td>
+            <td>🔑 如果看不到此字段，见下方说明</td>
+          </tr>
+          <tr>
+            <td><strong>密钥</strong></td>
+            <td><code>sk-your-deepseek-api-key-here</code></td>
+            <td>DeepSeek API Key</td>
+          </tr>
+          <tr>
+            <td><strong>模型映射</strong></td>
+            <td><code>deepseek-chat</code></td>
+            <td>输入模型名称后回车</td>
+          </tr>
+          <tr>
+            <td><strong>重定向</strong></td>
+            <td>❌ 不勾选</td>
+            <td>重要！务必取消勾选</td>
+          </tr>
+          <tr>
+            <td><strong>状态</strong></td>
+            <td>✅ 启用</td>
+            <td>确保渠道是启用状态</td>
+          </tr>
+        </table>
+      </div>
+
+      <div class="highlight">
+        <strong>💡 如果找不到 "Base URL" 输入框：</strong><br>
+        在 OneAPI 中，某些渠道类型（如 OpenAI）可能不会直接显示 "Base URL" 字段。<br>
+        这种情况下，你需要：<br>
+        1. 在渠道名称旁边找到一个 "自定义" 或 "高级" 选项<br>
+        2. 或者，在"密钥"字段后面可能有额外的配置选项<br>
+        3. 如果实在找不到，尝试选择其他渠道类型（如 "自定义"）
+      </div>
+
+      <div class="channel-card">
+        <h3>渠道 2: DeepSeek Reasoner</h3>
+        <table>
+          <tr><th>配置项</th><th>值</th></tr>
+          <tr><td>渠道类型</td><td><code>OpenAI</code></td></tr>
+          <tr><td>名称</td><td><code>DeepSeek-Reasoner</code></td></tr>
+          <tr><td>Base URL</td><td><code>https://api.deepseek.com/v1</code></td></tr>
+          <tr><td>密钥</td><td><code>sk-your-deepseek-api-key-here</code></td></tr>
+          <tr><td>模型映射</td><td><code>deepseek-reasoner</code></td></tr>
+          <tr><td>重定向</td><td>❌ 不勾选</td></tr>
+          <tr><td>状态</td><td>✅ 启用</td></tr>
+        </table>
+      </div>
+
+      <div class="channel-card">
+        <h3>渠道 3: Qwen Max</h3>
+        <table>
+          <tr><th>配置项</th><th>值</th></tr>
+          <tr><td>渠道类型</td><td><code>OpenAI</code></td></tr>
+          <tr><td>名称</td><td><code>Qwen-Max</code></td></tr>
+          <tr><td>Base URL</td><td><code>https://dashscope.aliyuncs.com/compatible-mode/v1</code></td></tr>
+          <tr><td>密钥</td><td><code>sk-your-dashscope-api-key-here</code></td></tr>
+          <tr><td>模型映射</td><td><code>qwen-max</code></td></tr>
+          <tr><td>重定向</td><td>❌ 不勾选</td></tr>
+          <tr><td>状态</td><td>✅ 启用</td></tr>
+        </table>
+      </div>
+
+      <div class="channel-card">
+        <h3>渠道 4: Qwen Flash</h3>
+        <table>
+          <tr><th>配置项</th><th>值</th></tr>
+          <tr><td>渠道类型</td><td><code>OpenAI</code></td></tr>
+          <tr><td>名称</td><td><code>Qwen-Flash</code></td></tr>
+          <tr><td>Base URL</td><td><code>https://dashscope.aliyuncs.com/compatible-mode/v1</code></td></tr>
+          <tr><td>密钥</td><td><code>sk-your-dashscope-api-key-here</code></td></tr>
+          <tr><td>模型映射</td><td><code>qwen-flash</code></td></tr>
+          <tr><td>重定向</td><td>❌ 不勾选</td></tr>
+          <tr><td>状态</td><td>✅ 启用</td></tr>
+        </table>
+      </div>
+
+      <div class="channel-card">
+        <h3>渠道 5: SiliconFlow DeepSeek V3.2</h3>
+        <table>
+          <tr><th>配置项</th><th>值</th></tr>
+          <tr><td>渠道类型</td><td><code>OpenAI</code></td></tr>
+          <tr><td>名称</td><td><code>SiliconFlow-V3.2</code></td></tr>
+          <tr><td>Base URL</td><td><code>https://api.siliconflow.cn/v1</code></td></tr>
+          <tr><td>密钥</td><td><code>sk-your-siliconflow-api-key-here</code></td></tr>
+          <tr><td>模型映射</td><td><code>Pro/deepseek-ai/DeepSeek-V3.2</code></td></tr>
+          <tr><td>重定向</td><td>❌ 不勾选</td></tr>
+          <tr><td>状态</td><td>✅ 启用</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="step">
+      <h3>保存并测试</h3>
+      <p>点击<strong>"提交"</strong>保存配置</p>
+      <p>在渠道列表中，找到刚才创建的渠道，点击右侧的<strong>"测试"</strong>按钮</p>
+    </div>
+
+    <h2>🔍 替代方案：使用渠道类型 "OpenAI"</h2>
+
+    <div class="highlight">
+      <strong>如果你的 OneAPI 版本中没有 "Base URL" 字段：</strong><br><br>
+      试试这个方法：<br>
+      1. 渠道类型选择 <strong>"OpenAI"</strong><br>
+      2. 在 "密钥" 字段中，尝试使用格式：<code>Base_URL|API_KEY</code><br>
+      例如：<code>https://api.deepseek.com/v1|sk-your-deepseek-api-key-here</code><br><br>
+      <em>注意：这个方法可能不适用于所有版本的 OneAPI</em>
+    </div>
+
+    <h2>✅ 配置完成后的测试</h2>
+
+    <div class="success">
+      <strong>所有渠道添加完成后，运行测试：</strong>
+      <pre>npx tsx scripts/test-oneapi-setup.ts</pre>
+    </div>
+
+    <h2>❓ 常见问题</h2>
+
+    <div class="channel-card">
+      <h3>Q: 找不到 "Base URL" 输入框？</h3>
+      <p><strong>A:</strong> 尝试以下方法：</p>
+      <ol>
+        <li>点击表单右上角的 "高级选项" 或 "更多配置"</li>
+        <li>或者选择渠道类型为 "自定义" 而不是 "OpenAI"</li>
+        <li>或者在渠道名称输入框旁边寻找一个齿轮图标⚙️</li>
+      </ol>
+    </div>
+
+    <div class="channel-card">
+      <h3>Q: 模型映射怎么填写？</h3>
+      <p><strong>A:</strong> 在"模型映射"字段中：</p>
+      <ol>
+        <li>输入模型名称（如 <code>deepseek-chat</code>）</li>
+        <li>按 <strong>Enter</strong> 键确认</li>
+        <li>可以添加多个模型，每输入一个按一次回车</li>
+      </ol>
+    </div>
+
+    <div class="channel-card">
+      <h3>Q: 配置后测试失败？</h3>
+      <p><strong>A:</strong> 检查以下几点：</p>
+      <ol>
+        <li>API Key 是否正确（没有多余的空格）</li>
+        <li>Base URL 是否完整（包含 <code>/v1</code>）</li>
+        <li>"重定向"是否已取消勾选</li>
+        <li>渠道状态是否为"启用"</li>
+      </ol>
+    </div>
+
+  </div>
+</body>
+</html>

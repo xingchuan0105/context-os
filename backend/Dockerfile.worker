@@ -1,0 +1,24 @@
+# Context-OS Document Processing Worker
+# This Dockerfile builds a worker container for processing document queue
+
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies for native modules and Python for semchunk
+RUN apk add --no-cache python3 py3-pip make g++ && \
+    pip3 install --no-cache-dir --break-system-packages semchunk
+
+# Copy package files
+COPY package.json package-lock.json* ./
+
+# Install all dependencies (including dev for tsx)
+RUN npm ci --legacy-peer-deps
+
+# Copy source code
+COPY . .
+
+# Create data directory
+RUN mkdir -p /app/data
+
+CMD ["node", "--max-old-space-size=3072", "--expose-gc", "node_modules/tsx/dist/cli.mjs", "--no-cache", "scripts/worker-qdrant.ts"]

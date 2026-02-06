@@ -1,0 +1,69 @@
+# OneAPI Docker Compose 配置
+# 用于快速部署 OneAPI 网关服务
+#
+# 使用方法:
+#   1. 复制此文件到项目根目录 (可选)
+#   2. 运行: docker-compose -f docker-compose.oneapi.yml up -d
+#   3. 访问: http://localhost:3000
+
+version: '3.8'
+
+services:
+  # OneAPI 主服务
+  one-api:
+    image: justsong/one-api:latest
+    container_name: context-os-oneapi
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - TZ=Asia/Shanghai
+      # 数据库配置 (可选，默认使用 SQLite)
+      # - SQL_DSN=root:123456@tcp(one-api-db:3306)/oneapi
+    volumes:
+      # 数据持久化目录
+      - ./data/oneapi:/data
+    networks:
+      - context-os-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Redis (用于任务队列)
+  redis:
+    image: redis:7-alpine
+    container_name: context-os-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - ./data/redis:/data
+    networks:
+      - context-os-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # MySQL 可选数据库 (用于 OneAPI 生产环境)
+  # one-api-db:
+  #   image: mysql:8.0
+  #   container_name: context-os-oneapi-db
+  #   restart: unless-stopped
+  #   environment:
+  #     - MYSQL_ROOT_PASSWORD=your_root_password
+  #     - MYSQL_DATABASE=oneapi
+  #     - TZ=Asia/Shanghai
+  #   volumes:
+  #     - ./data/mysql:/var/lib/mysql
+  #   networks:
+  #     - context-os-network
+
+networks:
+  context-os-network:
+    driver: bridge

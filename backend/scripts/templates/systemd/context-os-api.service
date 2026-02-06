@@ -1,0 +1,17 @@
+[Unit]
+Description=Context-OS API
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory={{APP_DIR}}
+EnvironmentFile={{ENV_FILE}}
+ExecStart=/usr/bin/node .next/standalone/server.js
+StandardOutput=append:/var/log/context-os/api.log
+StandardError=append:/var/log/context-os/api.err.log
+Restart=always
+RestartSec=3
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

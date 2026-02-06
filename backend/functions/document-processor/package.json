@@ -1,0 +1,25 @@
+{
+  "name": "document-processor-fc",
+  "version": "1.0.0",
+  "description": "阿里云函数计算 - 文档处理函数",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc && node dist/index.js",
+    "package": "npm run build && cd dist && bestzip ../function.zip *",
+    "package:win": "npm run build && powershell -Command \"Compress-Archive -Path dist\\* -DestinationPath function.zip -Force\""
+  },
+  "dependencies": {
+    "@qdrant/js-client-rest": "^1.16.2",
+    "@supabase/supabase-js": "^2.90.1",
+    "cheerio": "^1.1.2",
+    "mammoth": "^1.11.0",
+    "openai": "^6.16.0",
+    "unpdf": "^1.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "bestzip": "^2.2.1",
+    "typescript": "^5"
+  }
+}

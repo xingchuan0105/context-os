@@ -1,0 +1,12 @@
+services:
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    container_name: context-os-litellm
+    ports:
+      - "127.0.0.1:${LITELLM_PORT:-4410}:4000"
+    env_file:
+      - ./.env
+    volumes:
+      - ./litellm-config.yaml:/app/config.yaml
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+    restart: unless-stopped

@@ -1,0 +1,150 @@
+# Context-OS Development Docker Compose
+# This configuration is for local development
+
+services:
+  # Backend API Server
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: context-os-v3-backend
+    ports:
+      - "3002:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=/app/data/context-os.db
+      - QDRANT_URL=http://qdrant:6333
+      - LITELLM_BASE_URL=http://litellm:4000
+      - LITELLM_API_KEY=local-dev
+      - JWT_SECRET=dev-secret-key-change-in-production
+      - COOKIE_SECURE=false
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      # SMTP Configuration for Password Reset (163 Email)
+      - SMTP_HOST=smtp.163.com
+      - SMTP_PORT=465
+      - SMTP_SECURE=true
+      - SMTP_USER=zysolution@163.com
+      - SMTP_PASS=JQ7WL5XtqF4mAXNA
+      - SMTP_FROM=Context-OS <zysolution@163.com>
+    volumes:
+      - ./data:/app/data
+      - ./scripts/docker-entrypoint.sh:/app/docker-entrypoint.sh:ro
+    depends_on:
+      qdrant:
+        condition: service_started
+      litellm:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - context-os-v3-network
+    restart: unless-stopped
+
+  # Document Processing Worker
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: context-os-v3-worker
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=/app/data/context-os.db
+      - QDRANT_URL=http://qdrant:6333
+      - LITELLM_BASE_URL=http://litellm:4000
+      - LITELLM_API_KEY=local-dev
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      qdrant:
+        condition: service_started
+      litellm:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - context-os-v3-network
+    restart: unless-stopped
+
+  # Frontend Next.js App
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=http://backend:3000
+        - NEXT_PUBLIC_APP_URL=http://localhost:3003
+    container_name: context-os-v3-frontend
+    ports:
+      - "3003:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_API_URL=http://backend:3000
+      - NEXT_PUBLIC_APP_URL=http://localhost:3003
+    depends_on:
+      - backend
+    networks:
+      - context-os-v3-network
+    restart: unless-stopped
+
+  # LiteLLM Proxy Server
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    container_name: context-os-v3-litellm
+    ports:
+      - "127.0.0.1:4410:4000"
+    environment:
+      - LITELLM_API_KEY=local-dev
+      - SILICONFLOW_API_KEY=sk-owlyagtddajzlqjxhxsuwitpnrjvbwkrfqgjgqaspwznnfek
+      - SILICONFLOW_BASE_URL=https://api.siliconflow.cn/v1
+      - DASHSCOPE_API_KEY=sk-292b16fbc7b34cb9b82ec3293aa3717e
+      - DEEPSEEK_API_KEY=sk-87ba9837115b4c618b08fd4abfbdf514
+    volumes:
+      - ./litellm-config.yaml:/app/config.yaml
+    command: ["--config", "/app/config.yaml", "--port", "4000", "--detailed_debug"]
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:4000/health')\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - context-os-v3-network
+    restart: unless-stopped
+
+  # Qdrant Vector Database
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: context-os-v3-qdrant
+    ports:
+      - "16333:6333"
+      - "16334:6334"
+    environment:
+      - QDRANT__LOG_LEVEL=INFO
+    volumes:
+      - ./qdrant_storage:/qdrant/storage
+    networks:
+      - context-os-v3-network
+    restart: unless-stopped
+
+  # Redis (用于文档处理队列)
+  redis:
+    image: redis:7-alpine
+    container_name: context-os-v3-redis
+    volumes:
+      - ./redis_data:/data
+    networks:
+      - context-os-v3-network
+    restart: unless-stopped
+
+networks:
+  context-os-v3-network:
+    driver: bridge
+    name: context-os-v3-network
+
+volumes:
+  qdrant_storage:
+  redis_data:

@@ -1,0 +1,9 @@
+This is a test document for Context OS.
+
+This document contains sample content to test the upload functionality.
+The document should be processed with K-Type cognitive analysis after upload.
+
+Key points:
+- Document upload testing
+- K-Type processing verification
+- Three-layer chunk indexing validation

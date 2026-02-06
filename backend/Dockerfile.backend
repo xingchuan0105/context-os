@@ -1,0 +1,61 @@
+# Context-OS Backend Dockerfile
+# Builds the backend API server (Next.js API routes)
+
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Set build-time environment variables (NODE_ENV set later to allow devDependencies)
+ENV JWT_SECRET=build-time-secret
+ENV DATABASE_URL=file:///tmp/build.db
+
+# Install dependencies (include devDependencies for build tools)
+COPY package.json package-lock.json* ./
+RUN npm ci --include=dev --legacy-peer-deps
+
+# Set NODE_ENV for build
+ENV NODE_ENV=production
+
+# Copy source code
+COPY . .
+
+# Build the application
+RUN npm run build
+
+# ==========================================
+# Runner Stage
+# ==========================================
+FROM node:20-alpine AS runner
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+# Install runtime dependencies for semchunk
+RUN apk add --no-cache python3 py3-pip && \
+    pip3 install --no-cache-dir --break-system-packages semchunk
+
+# Create non-root user
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
+
+# Copy necessary files from builder
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# Create data directory for SQLite database
+RUN mkdir -p /app/data && chown -R nextjs:nodejs /app/data
+
+# Copy entrypoint script for Windows Docker SQLite workaround
+COPY --chown=nextjs:nodejs scripts/docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
+
+USER nextjs
+
+EXPOSE 3000
+
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
+CMD ["node", "server.js"]

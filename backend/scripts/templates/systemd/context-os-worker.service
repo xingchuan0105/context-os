@@ -1,0 +1,17 @@
+[Unit]
+Description=Context-OS Worker
+After=network.target redis-server.service
+
+[Service]
+Type=simple
+WorkingDirectory={{APP_DIR}}
+EnvironmentFile={{ENV_FILE}}
+ExecStart=/usr/bin/node --max-old-space-size=3072 --expose-gc node_modules/tsx/dist/cli.mjs --no-cache scripts/worker-qdrant.ts
+StandardOutput=append:/var/log/context-os/worker.log
+StandardError=append:/var/log/context-os/worker.err.log
+Restart=always
+RestartSec=3
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

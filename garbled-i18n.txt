@@ -1,0 +1,367 @@
+nav.sources	Sources
+nav.notebooks	Notebooks
+nav.search	Ask and Search
+nav.podcasts	Podcasts
+nav.models	Models
+nav.transformations	Transformations
+nav.advanced	Advanced
+action.createSource	Create Source
+action.createNotebook	Create Notebook
+action.createPodcast	Create Podcast
+command.title	Command Palette
+command.description	Navigate, search, or ask your knowledge base
+command.placeholder	Type a command or search...
+command.section.searchAsk	Search & Ask
+command.section.navigation	Navigation
+command.section.notebooks	Notebooks
+command.section.create	Create
+command.section.theme	Theme
+command.section.orSearch	Or search your knowledge base
+command.searchFor	Search for ?{{query}}?
+command.askAbout	Ask about ?{{query}}?
+command.loadingNotebooks	Loading notebooks...
+auth.connectionErrorTitle	Connection Error
+auth.connectionErrorDesc	Unable to connect to the API server
+auth.connectionErrorDetails	Unable to connect to server. Please check if the API is running.
+auth.diagnosticInfo	Diagnostic Information:
+auth.diagnosticVersion	Version:
+auth.diagnosticBuilt	Built:
+auth.diagnosticApiUrl	API URL:
+auth.diagnosticFrontend	Frontend:
+auth.diagnosticConsoleHint	Check browser console for detailed logs (look for [Config] messages)
+auth.retryConnection	Retry Connection
+auth.loginDescription	Enter your email and password to access the application
+auth.emailPlaceholder	Email
+auth.passwordLabel	Password
+auth.passwordPlaceholder	Password
+auth.forgotPasswordLink	Forgot password?
+auth.signingIn	Signing in...
+auth.signIn	Sign In
+auth.noAccount	"Don't have an account?"
+auth.registerLink	Register
+auth.registerTitle	Create Account
+auth.registerDescription	Enter your details to register for NotebookContext
+auth.fullNamePlaceholder	Full name (optional)
+auth.registerPasswordPlaceholder	Password (min 8 chars, include upper/lowercase and numbers)
+auth.registering	Registering...
+auth.register	Register
+auth.haveAccount	Already have an account?
+auth.signInLink	Sign In
+auth.forgotTitle	Forgot Password
+auth.forgotDescription	Enter your registered email and we will send a reset link
+auth.forgotEmailLabel	Email address
+auth.resetRequestFailed	Request failed
+auth.resetRequestFailedRetry	Request failed, please try again later
+auth.emailSentTitle	Email sent
+auth.emailSentDescription	If the email is registered, you will receive a reset link
+auth.checkInbox	Check your inbox (including spam)
+auth.resetLinkExpiry	Reset link is valid for 1 hour
+auth.backToLogin	Back to login
+auth.sendReset	Send reset email
+auth.sendingReset	Sending...
+auth.rememberPassword	Remembered your password?
+auth.resetTokenMissing	Invalid reset link
+auth.resetTokenInvalid	Invalid or expired reset link
+auth.resetTokenExpired	Invalid or expired reset link
+auth.resetVerifyFailed	Failed to verify reset link
+auth.resetInvalidTitle	Invalid link
+auth.resetInvalidDescription	The reset link is invalid or expired
+auth.requestNewLink	Request new reset link
+auth.resetSuccessTitle	Password reset successful
+auth.resetSuccessDescription	Your password has been reset
+auth.redirectingToLogin	Redirecting to login...
+auth.loginNow	Log in now
+auth.resetTitle	Reset Password
+auth.resetForEmail	Set a new password for {{email}}
+auth.newPasswordLabel	New password
+auth.newPasswordPlaceholder	At least 8 chars, include upper/lowercase and numbers
+auth.confirmPasswordLabel	Confirm new password
+auth.confirmPasswordPlaceholder	Re-enter new password
+auth.resetPasswordButton	Reset password
+auth.passwordRules	Password must be at least 8 characters and include upper/lowercase letters and numbers
+auth.resetFailed	Reset failed
+auth.resetFailedRetry	Reset failed, please try again later
+auth.passwordTooShort	Password must be at least 8 characters
+auth.passwordNeedLower	Password must include at least one lowercase letter
+auth.passwordNeedUpper	Password must include at least one uppercase letter
+auth.passwordNeedNumber	Password must include at least one number
+auth.passwordMismatch	Passwords do not match
+connection.apiTitle	Unable to Connect to API Server
+connection.dbTitle	Database Connection Failed
+connection.apiDesc	The NotebookContext API server could not be reached
+connection.dbDesc	The API server is running, but the database is not accessible
+connection.usuallyMeans	This usually means:
+connection.apiReason1	The API server is not running
+connection.apiReason2	The API server is running on a different address
+connection.apiReason3	Network connectivity issues
+connection.dbReason1	The database file is missing or locked
+connection.dbReason2	The DATABASE_URL setting is incorrect
+connection.dbReason3	Filesystem permissions prevent access
+connection.quickFixes	Quick fixes:
+connection.apiFixTitle	Check the frontend API URL and backend port:
+connection.dbFixTitle	Check DATABASE_URL and file access:
+connection.apiFixEnv	# .env.local (frontend)
+connection.apiFixBackend	# Backend (local dev):
+connection.dbFixEnv	# .env.local (backend)
+connection.dbFixFile	# Ensure the file is readable and not locked
+connection.docsIntro	For detailed setup instructions, see:
+connection.docsTitle	NotebookContext Documentation
+connection.showDetails	Show Technical Details
+connection.attemptedUrl	Attempted URL:
+connection.message	Message:
+connection.technicalDetails	Technical Details:
+connection.stackTrace	Stack Trace:
+connection.retry	Retry Connection
+connection.retryHint	Press R or click the button to retry
+common.na	N/A
+common.all	All
+common.unknown	Unknown
+systemInfo.title	System Information
+systemInfo.loading	Loading...
+systemInfo.currentVersion	Current Version
+systemInfo.latestVersion	Latest Version
+systemInfo.status	Status
+systemInfo.updateAvailable	Update Available
+systemInfo.upToDate	Up to Date
+systemInfo.viewUpdates	View updates
+systemInfo.updateCheckFailed	Unable to check for updates. GitHub may be unreachable.
+models.type.language	Language
+models.type.embedding	Embedding
+models.type.textToSpeech	Text-to-Speech
+models.type.speechToText	Speech-to-Text
+models.add.button	Add Model
+models.add.title	Add {{type}} Model
+models.add.description	Configure a new {{type}} model from available providers.
+models.add.providerLabel	Provider
+models.add.providerPlaceholder	Select a provider
+models.add.providerRequired	Provider is required
+models.add.nameLabel	Model Name
+models.add.nameRequired	Model name is required
+models.add.namePlaceholder.language	e.g., gpt-5-mini, claude, gemini
+models.add.namePlaceholder.embedding	e.g., text-embedding-3-small
+models.add.namePlaceholder.textToSpeech	e.g., tts-gpt-4o-mini-tts, tts-1-hd
+models.add.namePlaceholder.speechToText	e.g., whisper-1
+models.add.namePlaceholder.default	Enter model name
+models.add.azureHint	For Azure, use the deployment name as the model name
+models.add.noProviders	No providers available for {{type}} models
+models.add.adding	Adding...
+models.defaults.title	Default Model Assignments
+models.defaults.description	Configure which models to use for different purposes across NotebookContext
+models.defaults.missingRequired	Missing required models: {{models}}. NotebookContext may not function properly without these.
+models.defaults.requiredPlaceholder	?? Required - Select a model
+models.defaults.placeholder	Select a model
+models.defaults.guideLink	Model selection guide ?
+models.defaults.chat.label	Chat Model
+models.defaults.chat.description	Used for chat conversations
+models.defaults.transformation.label	Transformation Model
+models.defaults.transformation.description	Used for summaries, insights, and transformations
+models.defaults.tools.label	Tools Model
+models.defaults.tools.description	Used for function calling - OpenAI or Anthropic recommended
+models.defaults.largeContext.label	Large Context Model
+models.defaults.largeContext.description	Used for processing large documents - Gemini recommended
+models.defaults.embedding.label	Embedding Model
+models.defaults.embedding.description	Used for semantic search and vector embeddings
+models.defaults.textToSpeech.label	Text-to-Speech Model
+models.defaults.textToSpeech.description	Used for podcast generation
+models.defaults.speechToText.label	Speech-to-Text Model
+models.defaults.speechToText.description	Used for audio transcription
+models.section.language.title	Language Models
+models.section.language.description	Chat, transformations, and text generation
+models.section.embedding.title	Embedding Models
+models.section.embedding.description	Semantic search and vector embeddings
+models.section.textToSpeech.title	Text-to-Speech
+models.section.textToSpeech.description	Generate audio from text
+models.section.speechToText.title	Speech-to-Text
+models.section.speechToText.description	Transcribe audio to text
+models.noProviderModels	No {{provider}} models configured
+models.noModels	No models configured
+models.showLess	Show less
+models.showMore	Show {{count}} more
+models.delete.title	Delete Model
+models.delete.description	Are you sure you want to delete "{{name}}"? This action cannot be undone.
+models.delete.confirm	Delete
+models.providers.title	AI Providers
+models.providers.description	Configure providers through environment variables to enable their models.
+models.providers.configuredCount	{{configured}} of {{total}} configured
+models.providers.noModels	No models
+models.providers.notConfigured	Not configured
+models.providers.seeLess	See less
+models.providers.seeAll	See all {{count}} providers
+models.providers.learnMore	Learn how to configure providers ?
+advanced.rebuild.title	Rebuild Embeddings
+advanced.rebuild.description	Rebuild vector embeddings for your content. Use this when switching embedding models or fixing corrupted embeddings.
+advanced.rebuild.modeLabel	Rebuild Mode
+advanced.rebuild.modeExisting	Existing
+advanced.rebuild.modeAll	All
+advanced.rebuild.modeHintExisting	Re-embed only items that already have embeddings (faster, for model switching)
+advanced.rebuild.modeHintAll	Re-embed existing items + create embeddings for items without any (slower, comprehensive)
+advanced.rebuild.includeLabel	Include in Rebuild
+advanced.rebuild.sources	Sources
+advanced.rebuild.notes	Notes
+advanced.rebuild.insights	Insights
+advanced.rebuild.selectAtLeastOne	Please select at least one item type to rebuild
+advanced.rebuild.start	Start Rebuild
+advanced.rebuild.starting	Starting...
+advanced.rebuild.startFailed	Failed to start rebuild:
+advanced.rebuild.unknownError	Unknown error
+advanced.rebuild.status.queued	Queued
+advanced.rebuild.status.running	Running...
+advanced.rebuild.status.completed	Completed
+advanced.rebuild.status.failed	Failed
+advanced.rebuild.runningHint	You can leave this page as this will run in the background
+advanced.rebuild.startNew	Start New Rebuild
+advanced.rebuild.progress	Progress
+advanced.rebuild.progressItems	{{processed}}/{{total}} items ({{percent}}%)
+advanced.rebuild.itemsFailed	{{count}} items failed to process
+advanced.rebuild.stats.sources	Sources
+advanced.rebuild.stats.notes	Notes
+advanced.rebuild.stats.insights	Insights
+advanced.rebuild.stats.time	Time
+advanced.rebuild.timeSeconds	{{value}}s
+advanced.rebuild.startedAt	Started: 
+advanced.rebuild.completedAt	Completed: 
+advanced.rebuild.help.whenTitle	When should I rebuild embeddings?
+advanced.rebuild.help.whenIntro	You should rebuild embeddings when:
+advanced.rebuild.help.when.switchModelTitle	Switching embedding models:
+advanced.rebuild.help.when.switchModelDesc	If you change from one embedding model to another, you need to rebuild all embeddings to ensure consistency.
+advanced.rebuild.help.when.upgradeTitle	Upgrading model versions:
+advanced.rebuild.help.when.upgradeDesc	When updating to a newer version of your embedding model, rebuild to take advantage of improvements.
+advanced.rebuild.help.when.fixCorruptTitle	Fixing corrupted embeddings:
+advanced.rebuild.help.when.fixCorruptDesc	If you suspect some embeddings are corrupted or missing, rebuilding can restore them.
+advanced.rebuild.help.when.bulkImportTitle	After bulk imports:
+advanced.rebuild.help.when.bulkImportDesc	If you imported content without embeddings, use ?All? mode to embed everything.
+advanced.rebuild.help.timeTitle	How long does rebuilding take?
+advanced.rebuild.help.timeIntro	Processing time depends on:
+advanced.rebuild.help.timeFactor1	Number of items to process
+advanced.rebuild.help.timeFactor2	Embedding model speed
+advanced.rebuild.help.timeFactor3	API rate limits (for cloud providers)
+advanced.rebuild.help.timeFactor4	System resources
+advanced.rebuild.help.timeTypical	Typical rates:
+advanced.rebuild.help.timeLocal	Local models (Ollama): Very fast, limited only by hardware
+advanced.rebuild.help.timeCloud	Cloud APIs (OpenAI, Google): Moderate speed, may hit rate limits with large datasets
+advanced.rebuild.help.timeSources	Sources: Slower than notes/insights (creates multiple chunks per source)
+advanced.rebuild.help.timeExample	Example: Rebuilding 200 items might take 2?5 minutes with cloud APIs, or under 1 minute with local models.
+advanced.rebuild.help.safeTitle	Is it safe to rebuild while using the app?
+advanced.rebuild.help.safeIntro	Yes, rebuilding is safe!
+advanced.rebuild.help.safeItem1	Is idempotent: Running multiple times produces the same result
+advanced.rebuild.help.safeItem2	"Doesn't delete content: Only replaces embeddings"
+advanced.rebuild.help.safeItem3	Can be run anytime: No need to stop other operations
+advanced.rebuild.help.safeItem4	Handles errors gracefully: Failed items are logged and skipped
+advanced.rebuild.help.safeCaution	Note: Very large rebuilds (1000s of items) may temporarily slow down searches while processing.
+common.yes	Yes
+common.no	No
+common.untitled	Untitled
+label.name	Name
+action.archive	Archive
+action.unarchive	Unarchive
+action.delete	Delete
+action.deleteForever	Delete Forever
+action.deleting	Deleting...
+action.remove	Remove
+action.edit	Edit
+action.save	Save
+notebook.archived	Archived
+notebook.noDescription	No description
+notebook.deleteTitle	Delete Notebook
+notebook.deleteDescription	Are you sure you want to delete "{{name}}"? This action cannot be undone and will delete all sources, notes, and chat sessions.
+notebook.namePlaceholder	Notebook name
+notebook.descriptionPlaceholder	Add a description...
+notebook.emptyDescription	Start by creating your first notebook to organize your research.
+notes.editor.title.edit	Edit Note
+notes.editor.title.create	Create Note
+notes.editor.loading	Loading note?
+notes.editor.titlePlaceholder	Add a title...
+notes.editor.untitled	Untitled Note
+notes.editor.contentPlaceholder	Write your note content here...
+notes.editor.contentRequired	Content is required
+notes.editor.saving	Saving...
+notes.editor.creating	Creating...
+notes.editor.save	Save Note
+notes.editor.create	Create Note
+notes.emptyTitle	No notes yet
+notes.emptyDescription	Create your first note to capture insights and observations.
+notes.aiGenerated	AI Generated
+notes.human	Human
+notes.deleteTitle	Delete Note
+notes.deleteDescription	Are you sure you want to delete this note? This action cannot be undone.
+source.addNew	Add New Source
+source.deleteConfirmLong	Are you sure you want to delete this source? This action cannot be undone.
+source.removeTitle	Remove Source from Notebook
+source.removeDescription	Are you sure you want to remove this source from the notebook? The source itself will not be deleted.
+source.websiteTitle	Website Source
+source.document	Document
+share.error.title	Error
+share.error.noSources	No sources available for this knowledge base
+share.error.createSessionFailed	Failed to create chat session
+share.systemPrompt	Please respond in English unless the user explicitly asks for another language.
+quickNote.markdown.titlePrefix	Quick Note
+quickNote.markdown.timePrefix	Time: 
+quickNote.markdown.dialogueLabel	Dialogue
+quickNote.markdown.role.user	User
+quickNote.fallbackTitle	Quick Note
+quickNote.loadFailed	Failed to load quick notes
+quickNote.chatFailed	Chat failed, please retry
+quickNote.selectMessagesToSave	Select messages to save
+quickNote.labelRequired	Please enter a label
+quickNote.saveFailed	Failed to save quick note
+quickNote.loadDetailFailed	Failed to load quick note
+settings.error.loadFailedTitle	Failed to load settings
+settings.error.unexpected	An unexpected error occurred.
+settings.helpChoose	Help me choose
+settings.content.title	Content Processing
+settings.content.description	Configure how documents and URLs are processed
+settings.content.docEngineLabel	Document Processing Engine
+settings.content.docEnginePlaceholder	Select document processing engine
+settings.content.urlEngineLabel	URL Processing Engine
+settings.content.urlEnginePlaceholder	Select URL processing engine
+settings.content.engine.auto	Auto (Recommended)
+settings.content.docHelp.docling	? Docling is a little slower but more accurate, especially if the documents contain tables and images.
+settings.content.docHelp.simple	? Simple extracts content without formatting. It is fine for simple documents but loses quality on complex ones.
+settings.content.docHelp.auto	? Auto (recommended) tries Docling and falls back to Simple.
+settings.content.urlHelp.firecrawl	? Firecrawl is a paid service (with a free tier) and very powerful.
+settings.content.urlHelp.jina	? Jina is also a good option with a free tier.
+settings.content.urlHelp.simple	? Simple uses basic HTTP extraction and may miss content on JavaScript-based sites.
+settings.content.urlHelp.auto	? Auto (recommended) tries Firecrawl (if API key is present), then uses Jina until rate limits. It falls back to Simple when others are unavailable.
+settings.embedding.title	Embedding and Search
+settings.embedding.description	Configure search and embedding options
+settings.embedding.optionLabel	Default Embedding Option
+settings.embedding.optionPlaceholder	Select embedding option
+settings.embedding.option.ask	Ask
+settings.embedding.option.always	Always
+settings.embedding.option.never	Never
+settings.embedding.help.overview	Embedding content makes it easier to find for you and your AI agents. If you run a local embedding model (e.g., Ollama), cost is usually not a concern. For cloud providers, be mindful if you process lots of content.
+settings.embedding.help.always	? Choose ?always? if you run a local embedding model or your content volume is small
+settings.embedding.help.ask	? Choose ?ask? if you want to decide each time
+settings.embedding.help.never	? Choose ?never? if you do not need vector search or lack an embedding provider
+settings.embedding.help.reference	Reference: OpenAI?s text-embedding-3-small costs about $0.02 per 1M tokens ? roughly 30? the Wikipedia page for Earth. Gemini Text Embedding 004 is free with a 1500 RPM rate limit.
+settings.files.title	File Management
+settings.files.description	Configure file handling and storage options
+settings.files.autoDeleteLabel	Auto Delete Files
+settings.files.autoDeletePlaceholder	Select auto delete option
+settings.files.help.overview	After files are uploaded and processed, they are usually not needed. Most users should allow NotebookContext to delete uploaded files automatically. Choose ?no? only if the notebook is the primary storage location. This option may be deprecated in favor of always downloading files.
+settings.files.help.yes	? Choose ?yes? (recommended) to delete uploaded files after processing
+settings.files.help.no	? Choose ?no? only if you need to keep originals in the upload folder
+settings.save.saving	Saving...
+settings.save.submit	Save Settings
+transformations.defaultPrompt.title	Default Transformation Prompt
+transformations.defaultPrompt.description	This will be added to all your transformation prompts
+transformations.defaultPrompt.placeholder	Enter your default transformation instructions...
+transformations.badge.default	Default
+transformations.playground	Playground
+transformations.prompt	Prompt
+transformations.delete.title	Delete Transformation
+transformations.delete.description	Are you sure you want to delete "{{name}}"? This action cannot be undone.
+transformations.editTitle	Edit transformation
+transformations.createTitle	Create transformation
+transformations.loading	Loading transformation?
+transformations.placeholder.name	Unique identifier, e.g. key_topics
+transformations.placeholder.title	Displayed title, defaults to name
+transformations.defaultSuggestion	Suggest by default on new sources
+transformations.placeholder.description	Describe what this transformation does.
+transformations.placeholder.prompt	Write the prompt that will power this transformation...
+transformations.promptHint	Prompts should be written with the source content in mind. You can ask the model to summarise, extract insights, or produce structured outputs such as tables.
+transformations.saving	Saving?
+transformations.creating	Creating?
+transformations.save	Save Transformation
+transformations.create	Create Transformation
+transformations.error.nameRequired	Name is required
