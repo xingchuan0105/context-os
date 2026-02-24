@@ -2,6 +2,7 @@
 
 > 适用对象：当前 Context-OS 管理后台 + LiteLLM 网关 + Qdrant 双机架构。
 > 目标：部署过程可门禁、可回滚、可审计。
+> 执行顺序清单：`backend/docs/RELEASE_CHECKLIST.md`
 
 ## 1. 适用架构
 

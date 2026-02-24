@@ -1,31 +1,89 @@
-# Release Checklist
+# Release Checklist (Single-Operator + Codex)
 
-## Environment
-- Fill `docs/PRODUCTION_ENV_TEMPLATE.md` and set secrets in Coolify.
-- Set `ENV_STRICT=1` for production validation.
-- Verify `QDRANT_URL` and `LITELLM_BASE_URL` are reachable from the app.
+> Purpose: provide deterministic release steps for the repo owner and Codex agents.
 
-## Services
-- Qdrant healthy: `GET /` returns `qdrant`.
-- LiteLLM healthy: verify `/v1/models` (or internal health endpoint).
-- Storage path writable (`DATABASE_URL` location and local file storage).
+## 0) Scope freeze
 
-## Smoke
-- Run `scripts/e2e-ingest-and-recall.ts` once with a small test file.
-- Confirm output report at `scripts/e2e-report.json`.
-- Run `npm run selfcheck` to verify external dependencies.
+- [ ] Confirm release goal and excluded scope (especially experiments).
+- [ ] Create release branch from latest stable main.
+- [ ] Confirm commit whitelist before any staging.
 
-## Performance
-- Run `scripts/load-test-rag.ts` and record the baseline in `docs/PERFORMANCE_BASELINE.md`.
+---
 
-## Observability
-- Check request logs include `x-request-id`.
-- If `METRICS_ENABLED=true`, verify `GET /api/metrics`.
+## 1) Local code gates
 
-## Backup
-- Create initial SQLite backup.
-- Create Qdrant snapshot for each collection.
+- [ ] `npm ci`
+- [ ] `npm run build`
+- [ ] Confirm no accidental file drift in release commit scope.
 
-## Rollback
-- Keep previous container image tag.
-- Keep matching SQLite + Qdrant snapshot for rollback.
+Recommended status check:
+
+```bash
+git status --short
+git diff --name-only
+```
+
+---
+
+## 2) Release commit hygiene
+
+- [ ] Stage only release files (explicit `git add <file...>`).
+- [ ] Ensure no `venv`, `redis_data`, logs, experiments, diff artifacts.
+- [ ] Create clear commit messages:
+  - fix commit(s)
+  - deploy/process commit(s)
+
+Validation:
+
+```bash
+git diff --cached --name-only
+```
+
+---
+
+## 3) Server preflight (Go / No-Go)
+
+- [ ] API/worker/nginx/system services active.
+- [ ] LiteLLM and dependencies healthy.
+- [ ] Qdrant reachable.
+- [ ] Ports are not occupied by stale containers.
+
+---
+
+## 4) Production rollout
+
+- [ ] Use `backend/scripts/deploy/prod-rollout.sh` with explicit `RELEASE_REF`.
+- [ ] Confirm script generated release record in `/var/lib/context-os/deploy/releases/`.
+- [ ] Run smoke tests:
+  - `/api/health`
+  - `/api/admin/auth/me` (200/401 acceptable unauthenticated)
+  - `/admin/login`
+  - LiteLLM readiness endpoint
+
+---
+
+## 5) Post-release validation
+
+- [ ] Admin login works from domain.
+- [ ] Data reports read expected DB records (not empty due to wrong DB path).
+- [ ] Capability model test works with saved key/model config.
+- [ ] No 5xx spikes in API/LiteLLM/nginx logs.
+
+---
+
+## 6) Rollback readiness
+
+- [ ] Verify latest release record path.
+- [ ] Verify rollback script command is ready:
+  - `backend/scripts/deploy/prod-rollback.sh`
+- [ ] Verify backup artifacts exist (env/sqlite/qdrant/litellm dump when enabled).
+
+---
+
+## 7) Incident backport protocol (if hotfix happened on server)
+
+- [ ] Convert server hotfix into minimal repo patch immediately.
+- [ ] Commit only operationally relevant files.
+- [ ] Update runbook/checklist with prevention item.
+- [ ] Record root cause and verification evidence.
+
