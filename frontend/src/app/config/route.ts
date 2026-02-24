@@ -12,6 +12,32 @@ import { NextRequest, NextResponse } from 'next/server'
  */
 export const dynamic = 'force-dynamic'  // Disable static optimization
 
+function getFrontendOrigin(request: NextRequest): string {
+  const explicitOrigin = process.env.NEXT_PUBLIC_APP_URL?.trim()
+  if (explicitOrigin) {
+    return explicitOrigin
+  }
+
+  const forwardedProto = request.headers.get('x-forwarded-proto')
+  const protocol = (forwardedProto || request.nextUrl.protocol.replace(':', '') || 'http').toLowerCase()
+
+  const forwardedHost = request.headers.get('x-forwarded-host')
+  const rawHost = (forwardedHost || request.headers.get('host') || request.nextUrl.host || 'localhost:3003')
+    .split(',')[0]
+    .trim()
+
+  let normalizedHost = rawHost
+  if (normalizedHost.startsWith('0.0.0.0')) {
+    normalizedHost = `localhost${normalizedHost.slice('0.0.0.0'.length)}`
+  } else if (normalizedHost.startsWith('[::]')) {
+    normalizedHost = `localhost${normalizedHost.slice('[::]'.length)}`
+  } else if (normalizedHost.startsWith('::1')) {
+    normalizedHost = `localhost${normalizedHost.slice('::1'.length)}`
+  }
+
+  return `${protocol}://${normalizedHost}`
+}
+
 export async function GET(request: NextRequest) {
   try {
     const backendUrl =
@@ -41,7 +67,7 @@ export async function GET(request: NextRequest) {
     // Always return the frontend's own origin for apiUrl
     // This allows Next.js rewrites to proxy API calls to the backend
     // In Docker, NEXT_PUBLIC_APP_URL should be set to http://localhost:3003
-    const frontendOrigin = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin
+    const frontendOrigin = getFrontendOrigin(request)
 
     return NextResponse.json({
       apiUrl: frontendOrigin,
@@ -56,7 +82,7 @@ export async function GET(request: NextRequest) {
     console.error('[Config] Error generating config:', error)
 
     // Always return the frontend's own origin for apiUrl
-    const frontendOrigin = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin
+    const frontendOrigin = getFrontendOrigin(request)
 
     return NextResponse.json({
       apiUrl: frontendOrigin,

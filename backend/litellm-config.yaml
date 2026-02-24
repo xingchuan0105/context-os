@@ -83,6 +83,7 @@ model_list:
       api_base: https://api.siliconflow.cn/v1
 
 litellm_settings:
+  store_model_in_db: true
   num_retries: 2
   fallbacks:
     - qwen-flash:

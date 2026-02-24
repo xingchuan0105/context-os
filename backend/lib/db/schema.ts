@@ -31,6 +31,20 @@ export function initializeDatabase() {
     );
   `);
 
+  // Admin accounts table (independent admin portal auth)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS admin_accounts (
+      id TEXT PRIMARY KEY,
+      email TEXT UNIQUE NOT NULL,
+      password_hash TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'report_viewer',
+      is_active INTEGER NOT NULL DEFAULT 1,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      last_login_at DATETIME
+    );
+  `);
+
   // Password reset column upgrades - add columns if they don't exist
   try {
     // Get table info to check if columns exist
@@ -326,6 +340,49 @@ export function initializeDatabase() {
     );
   `);
 
+  // Admin model capability config table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS admin_model_capability_configs (
+      id TEXT PRIMARY KEY,
+      capability TEXT NOT NULL UNIQUE,
+      enabled BOOLEAN NOT NULL DEFAULT 1,
+      provider_mode TEXT NOT NULL DEFAULT 'litellm',
+      base_url TEXT,
+      api_key_ciphertext TEXT,
+      api_key_masked TEXT,
+      model TEXT,
+      timeout_ms INTEGER,
+      extra_json TEXT,
+      updated_by TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  // Admin LiteLLM model secrets table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS admin_litellm_model_secrets (
+      id TEXT PRIMARY KEY,
+      model_name TEXT NOT NULL UNIQUE,
+      api_key_ciphertext TEXT NOT NULL,
+      api_key_masked TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
+  // Admin model config audit table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS admin_model_config_audit_logs (
+      id TEXT PRIMARY KEY,
+      capability TEXT NOT NULL,
+      action TEXT NOT NULL,
+      changed_fields TEXT,
+      operator_user_id TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+  `);
+
   // Indexes
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_users_reset_token ON users(reset_token) WHERE reset_token IS NOT NULL;
@@ -341,6 +398,15 @@ export function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_notes_share ON notes(share_token) WHERE is_shared = 1;
     CREATE INDEX IF NOT EXISTS idx_quick_notes_user ON quick_notes(user_id);
     CREATE INDEX IF NOT EXISTS idx_quick_notes_updated ON quick_notes(updated_at);
+    CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at);
+    CREATE INDEX IF NOT EXISTS idx_admin_accounts_email ON admin_accounts(email);
+    CREATE INDEX IF NOT EXISTS idx_admin_accounts_role ON admin_accounts(role);
+    CREATE INDEX IF NOT EXISTS idx_documents_created_at ON documents(created_at);
+    CREATE INDEX IF NOT EXISTS idx_notes_updated_at ON notes(updated_at);
+    CREATE INDEX IF NOT EXISTS idx_chat_messages_session_created_at ON chat_messages(session_id, created_at);
+    CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON chat_messages(created_at);
+    CREATE INDEX IF NOT EXISTS idx_chat_sessions_user_kb_updated_at ON chat_sessions(user_id, kb_id, updated_at);
+    CREATE INDEX IF NOT EXISTS idx_chat_sessions_user_created_at ON chat_sessions(user_id, created_at);
   `);
 
   db.exec(`
@@ -373,6 +439,16 @@ export function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_kb_shares_token ON knowledge_base_shares(token);
     CREATE INDEX IF NOT EXISTS idx_kb_shares_kb ON knowledge_base_shares(kb_id);
     CREATE INDEX IF NOT EXISTS idx_kb_shares_user ON knowledge_base_shares(user_id);
+  `);
+
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_admin_model_capability_capability ON admin_model_capability_configs(capability);
+    CREATE INDEX IF NOT EXISTS idx_admin_model_capability_updated_at ON admin_model_capability_configs(updated_at);
+    CREATE INDEX IF NOT EXISTS idx_admin_model_audit_capability ON admin_model_config_audit_logs(capability);
+    CREATE INDEX IF NOT EXISTS idx_admin_model_audit_operator ON admin_model_config_audit_logs(operator_user_id);
+    CREATE INDEX IF NOT EXISTS idx_admin_model_audit_created_at ON admin_model_config_audit_logs(created_at);
+    CREATE INDEX IF NOT EXISTS idx_admin_litellm_model_secrets_model_name ON admin_litellm_model_secrets(model_name);
+    CREATE INDEX IF NOT EXISTS idx_admin_litellm_model_secrets_updated_at ON admin_litellm_model_secrets(updated_at);
   `);
 
   console.log('Database initialized successfully');

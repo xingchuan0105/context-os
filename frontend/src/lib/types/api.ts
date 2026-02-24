@@ -400,6 +400,15 @@ export interface AuthUser {
   avatar_url: string | null
 }
 
+export type AdminRole = 'super_admin' | 'report_viewer'
+
+export interface AdminAuthUser {
+  id: string
+  email: string
+  role: AdminRole
+  lastLoginAt: string | null
+}
+
 // Context-OS API Response Wrapper
 export interface ContextOSAPIResponse<T> {
   success: boolean
@@ -451,4 +460,296 @@ export interface QuickNoteSaveRequest {
   messages: QuickNoteMessage[]
   label?: string
   locale?: 'zh' | 'en'
+}
+
+export type AdminModelCapability =
+  | 'chat'
+  | 'ktype'
+  | 'embedding'
+  | 'rerank'
+  | 'ocr'
+  | 'query_rewrite'
+  | 'doc_routing'
+  | 'quicknote_summary'
+  | 'quicknote_label'
+  | 'quicknote_chat'
+  | 'web_parse_firecrawl'
+  | 'legacy_oneapi'
+
+export type AdminProviderMode = 'litellm' | 'direct' | 'legacy_oneapi'
+
+export interface AdminModelCapabilityMeta {
+  capability: AdminModelCapability
+  label: string
+  description: string
+  supportsModel: boolean
+  supportsTimeout: boolean
+  supportsPrompt: boolean
+  defaultProviderMode: AdminProviderMode
+  litellmOnly?: boolean
+}
+
+export interface AdminResolvedCapabilityConfig {
+  enabled: boolean
+  providerMode: AdminProviderMode
+  baseUrl: string | null
+  apiKeyMasked: string | null
+  model: string | null
+  timeoutMs: number | null
+  extra: Record<string, unknown>
+  source: 'db' | 'env' | 'default'
+  policy?: {
+    litellmEnforced?: boolean
+  }
+}
+
+export interface AdminStoredCapabilityConfig {
+  capability: AdminModelCapability
+  enabled: boolean
+  providerMode: AdminProviderMode
+  baseUrl: string | null
+  apiKeyMasked: string | null
+  model: string | null
+  timeoutMs: number | null
+  extra: Record<string, unknown>
+  updatedBy: string | null
+  createdAt: string | null
+  updatedAt: string | null
+}
+
+export interface AdminModelConfigListItem {
+  capability: AdminModelCapability
+  meta: AdminModelCapabilityMeta
+  config: AdminResolvedCapabilityConfig
+}
+
+export interface AdminModelConfigListResponse {
+  capabilities: AdminModelConfigListItem[]
+}
+
+export interface AdminModelConfigGetResponse {
+  capability: AdminModelCapability
+  config: AdminResolvedCapabilityConfig
+}
+
+export interface AdminModelConfigUpdateRequest {
+  enabled?: boolean
+  providerMode?: AdminProviderMode
+  baseUrl?: string | null
+  apiKey?: string | null
+  model?: string | null
+  timeoutMs?: number | null
+  extra?: Record<string, unknown> | null
+}
+
+export interface AdminModelConfigUpdateResponse {
+  capability: AdminModelCapability
+  config: AdminStoredCapabilityConfig
+}
+
+export type AdminModelConfigTestOverride = AdminModelConfigUpdateRequest
+
+export interface AdminModelConfigTestRequest {
+  useSaved?: boolean
+  override?: AdminModelConfigTestOverride
+}
+
+export interface AdminModelConfigTestResponse {
+  capability: AdminModelCapability
+  elapsedMs: number
+  source: 'db' | 'env' | 'default'
+  result: Record<string, unknown>
+}
+
+export interface AdminLiteLLMModelItem {
+  modelName: string
+  litellmModel: string
+  apiBase: string | null
+  apiKeyMasked: string | null
+  mode: string | null
+  raw: Record<string, unknown>
+}
+
+export interface AdminLiteLLMModelListResponse {
+  policy: {
+    allCapabilitiesViaLiteLLM: boolean
+  }
+  models: AdminLiteLLMModelItem[]
+}
+
+export interface AdminLiteLLMModelUpsertRequest {
+  modelName?: string
+  litellmModel: string
+  apiBase?: string | null
+  apiKey?: string | null
+  clearApiKey?: boolean
+  mode?: string | null
+  extraParams?: Record<string, unknown>
+}
+
+export interface AdminLiteLLMModelSecretResponse {
+  modelName: string
+  hasApiKey: boolean
+  apiKey: string | null
+  apiKeyMasked: string | null
+  source: 'table' | 'env' | null
+  envVar: string | null
+}
+export interface AdminMetricsCountPoint {
+  date: string
+  value: number
+}
+
+export interface AdminMetricsTokenPoint {
+  date: string
+  promptTokens: number
+  completionTokens: number
+  totalTokens: number
+  messageCount: number
+}
+
+export interface AdminMetricsTokenSummary {
+  promptTokens: number
+  completionTokens: number
+  totalTokens: number
+  messageCount: number
+}
+
+export interface AdminMetricsTopTokenUser {
+  userId: string
+  email: string
+  promptTokens: number
+  completionTokens: number
+  totalTokens: number
+  messageCount: number
+}
+
+export interface AdminMetricsRetentionPoint {
+  cohortDate: string
+  registeredUsers: number
+  retainedD1: number
+  retainedD7: number
+  d1Rate: number
+  d7Rate: number
+}
+
+export interface AdminMetricsOverviewResponse {
+  generatedAt: string
+  range: {
+    days: number
+    from: string
+    to: string
+    timezone: 'UTC'
+  }
+  users: {
+    total: number
+    newToday: number
+    newLast7Days: number
+    newLast30Days: number
+    dailyNew: AdminMetricsCountPoint[]
+  }
+  files: {
+    total: number
+    totalSizeBytes: number
+    statusCounts: {
+      queued: number
+      processing: number
+      completed: number
+      failed: number
+    }
+    successRate: number
+    newToday: number
+    newLast7Days: number
+    newLast30Days: number
+    dailyUploads: AdminMetricsCountPoint[]
+  }
+  tokens: {
+    estimated: boolean
+    totalPromptTokens: number
+    totalCompletionTokens: number
+    totalTokens: number
+    window1d: AdminMetricsTokenSummary
+    window7d: AdminMetricsTokenSummary
+    window30d: AdminMetricsTokenSummary
+    daily: AdminMetricsTokenPoint[]
+    topUsers: AdminMetricsTopTokenUser[]
+  }
+  activity: {
+    dau: number
+    wau: number
+    mau: number
+    dailyActiveUsers: AdminMetricsCountPoint[]
+    retention: {
+      d1: number
+      d7: number
+    }
+    retentionSeries: AdminMetricsRetentionPoint[]
+  }
+  meta: {
+    queryDurationMs: number
+    cache: {
+      hit: boolean
+      stale: boolean
+      ttlSeconds: number
+    }
+  }
+}
+
+
+export interface AdminLiteLLMDailyUsagePoint {
+  date: string
+  spend: number
+  apiRequests: number
+  promptTokens: number
+  completionTokens: number
+  totalTokens: number
+}
+
+export interface AdminLiteLLMProviderUsagePoint {
+  provider: string
+  spend: number
+  apiRequests: number
+  promptTokens: number
+  completionTokens: number
+  totalTokens: number
+}
+
+export interface AdminLiteLLMModelUsagePoint {
+  model: string
+  spend: number
+  apiRequests: number
+  promptTokens: number
+  completionTokens: number
+  totalTokens: number
+}
+
+export interface AdminLiteLLMUsageResponse {
+  generatedAt: string
+  range: {
+    days: number
+    from: string
+    to: string
+    timezone: 'UTC'
+  }
+  available: boolean
+  endpoint: string | null
+  warning: string | null
+  totals: {
+    spend: number
+    apiRequests: number
+    promptTokens: number
+    completionTokens: number
+    totalTokens: number
+  }
+  daily: AdminLiteLLMDailyUsagePoint[]
+  providers: AdminLiteLLMProviderUsagePoint[]
+  models: AdminLiteLLMModelUsagePoint[]
+  meta: {
+    queryDurationMs: number
+    cache: {
+      hit: boolean
+      stale: boolean
+      ttlSeconds: number
+    }
+  }
 }

@@ -48,11 +48,17 @@ apiClient.interceptors.response.use(
       if (typeof window !== 'undefined') {
         const requestUrl =
           typeof error.config?.url === 'string' ? error.config.url : ''
+        const isAdminApi = requestUrl.includes('/admin/')
+        const isAdminAuthEndpoint = requestUrl.includes('/admin/auth/')
         const isAuthEndpoint = requestUrl.includes('/auth/')
         const isLoginPage = window.location.pathname.startsWith('/login')
+        const isAdminLoginPage = window.location.pathname.startsWith('/admin/login')
 
-        if (!isAuthEndpoint && !isLoginPage) {
-          // Clear auth and redirect to login
+        if (isAdminApi) {
+          if (!isAdminAuthEndpoint && !isAdminLoginPage) {
+            window.location.href = '/admin/login'
+          }
+        } else if (!isAuthEndpoint && !isLoginPage) {
           clearAuthToken()
           window.location.href = '/login'
         }

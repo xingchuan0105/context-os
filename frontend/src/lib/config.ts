@@ -28,6 +28,42 @@ const BUILD_TIME = new Date().toISOString()
 let config: AppConfig | null = null
 let configPromise: Promise<AppConfig> | null = null
 
+function getFrontendOrigin(): string {
+  if (typeof window !== 'undefined') {
+    return window.location.origin
+  }
+
+  return process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3003'
+}
+
+function normalizeApiUrl(apiUrl: string): string {
+  if (typeof window === 'undefined') {
+    return apiUrl
+  }
+
+  try {
+    const parsedUrl = new URL(apiUrl)
+    if (parsedUrl.hostname === '0.0.0.0' || parsedUrl.hostname === '::' || parsedUrl.hostname === '[::]') {
+      return window.location.origin
+    }
+    return parsedUrl.origin
+  } catch {
+    return apiUrl
+  }
+}
+
+function buildFallbackConfig(overrides: Partial<AppConfig> = {}): AppConfig {
+  return {
+    apiUrl: getFrontendOrigin(),
+    version: 'unknown',
+    buildTime: BUILD_TIME,
+    latestVersion: null,
+    hasUpdate: false,
+    backendReachable: false,
+    ...overrides,
+  }
+}
+
 /**
  * Get the API URL to use for requests.
  *
@@ -44,14 +80,24 @@ export async function getApiUrl(): Promise<string> {
 
   // If we're already fetching, wait for that
   if (configPromise) {
-    const cfg = await configPromise
-    return cfg.apiUrl
+    try {
+      const cfg = await configPromise
+      return cfg.apiUrl
+    } catch (error) {
+      configPromise = null
+      throw error
+    }
   }
 
   // Start fetching config
   configPromise = fetchConfig()
-  const cfg = await configPromise
-  return cfg.apiUrl
+  try {
+    const cfg = await configPromise
+    return cfg.apiUrl
+  } catch (error) {
+    configPromise = null
+    throw error
+  }
 }
 
 /**
@@ -63,11 +109,21 @@ export async function getConfig(): Promise<AppConfig> {
   }
 
   if (configPromise) {
-    return await configPromise
+    try {
+      return await configPromise
+    } catch (error) {
+      configPromise = null
+      throw error
+    }
   }
 
   configPromise = fetchConfig()
-  return await configPromise
+  try {
+    return await configPromise
+  } catch (error) {
+    configPromise = null
+    throw error
+  }
 }
 
 /**
@@ -88,7 +144,7 @@ async function fetchConfig(): Promise<AppConfig> {
     })
     if (runtimeResponse.ok) {
       const runtimeData = await runtimeResponse.json() as RuntimeConfigResponse
-      runtimeApiUrl = runtimeData.apiUrl ?? null
+      runtimeApiUrl = runtimeData.apiUrl ? normalizeApiUrl(runtimeData.apiUrl) : null
       debugLog('? [Config] Runtime API URL from server:', runtimeApiUrl)
       if (runtimeApiUrl) {
         config = {
@@ -134,7 +190,7 @@ async function fetchConfig(): Promise<AppConfig> {
   }
 
   // Priority: Runtime config > Build-time env var > Smart default
-  const baseUrl = runtimeApiUrl || envApiUrl || defaultApiUrl
+  const baseUrl = normalizeApiUrl(runtimeApiUrl || envApiUrl || defaultApiUrl)
   debugLog('🔧 [Config] Final base URL to try:', baseUrl)
   debugLog('🔧 [Config] Selection priority: runtime=' + (runtimeApiUrl ? '✅' : '❌') +
               ', build-time=' + (envApiUrl ? '✅' : '❌') +
@@ -142,7 +198,6 @@ async function fetchConfig(): Promise<AppConfig> {
 
   try {
     debugLog('🔧 [Config] Fetching backend config from:', `${baseUrl}/config`)
-    // Try to fetch runtime config from backend
     const response = await fetch(`${baseUrl}/config`, {
       cache: 'no-store',
     })
@@ -150,24 +205,28 @@ async function fetchConfig(): Promise<AppConfig> {
     if (response.ok) {
       const data: BackendConfigResponse = await response.json()
       config = {
-        apiUrl: baseUrl, // Use baseUrl from runtime-config (Python no longer returns this)
+        apiUrl: baseUrl,
         version: data.version || 'unknown',
         buildTime: BUILD_TIME,
         latestVersion: data.latestVersion || null,
         hasUpdate: data.hasUpdate || false,
-        dbStatus: data.dbStatus, // Can be undefined for old backends
+        dbStatus: data.dbStatus,
         backendReachable: true,
       }
       debugLog('✅ [Config] Successfully loaded API config:', config)
       return config
-    } else {
-      // Don't log error here - ConnectionGuard will display it
-      throw new Error(`API config endpoint returned status ${response.status}`)
     }
+
+    debugLog('⚠️ [Config] Backend config endpoint returned status:', response.status)
   } catch (error) {
-    // Don't log error here - ConnectionGuard will display it with proper UI
-    throw error
+    debugLog('⚠️ [Config] Backend config fetch failed:', error)
   }
+
+  // Never cache a failed Promise: fall back to same-origin API routing
+  // so auth requests can still reach backend through Next.js rewrites.
+  config = buildFallbackConfig()
+  debugLog('⚠️ [Config] Falling back to frontend-origin API URL:', config.apiUrl)
+  return config
 }
 
 /**

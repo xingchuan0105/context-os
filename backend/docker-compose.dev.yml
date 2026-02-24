@@ -8,6 +8,7 @@ services:
       context: .
       dockerfile: Dockerfile.backend
     container_name: context-os-v3-backend
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
     ports:
       - "3002:3000"
     environment:
@@ -16,11 +17,30 @@ services:
       - DATABASE_URL=/app/data/context-os.db
       - QDRANT_URL=http://qdrant:6333
       - LITELLM_BASE_URL=http://litellm:4000
-      - LITELLM_API_KEY=local-dev
+      - LITELLM_API_KEY=${LITELLM_API_KEY:-sk-local-master-key}
       - JWT_SECRET=dev-secret-key-change-in-production
       - COOKIE_SECURE=false
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - ADMIN_SUPER_EMAIL=${ADMIN_SUPER_EMAIL:-xingchuan0105@163.com}
+      - ADMIN_SUPER_PASSWORD=${ADMIN_SUPER_PASSWORD:-Xc880105}
+      - ADMIN_REPORT_EMAIL=${ADMIN_REPORT_EMAIL:-}
+      - ADMIN_REPORT_PASSWORD=${ADMIN_REPORT_PASSWORD:-}
+      - ADMIN_METRICS_RATE_LIMIT_MAX=${ADMIN_METRICS_RATE_LIMIT_MAX:-120}
+      - ADMIN_METRICS_RATE_LIMIT_WINDOW_MS=${ADMIN_METRICS_RATE_LIMIT_WINDOW_MS:-60000}
+      - ADMIN_METRICS_CACHE_TTL_SECONDS=${ADMIN_METRICS_CACHE_TTL_SECONDS:-60}
+      - ADMIN_LITELLM_USAGE_CACHE_TTL_SECONDS=${ADMIN_LITELLM_USAGE_CACHE_TTL_SECONDS:-60}
+      - LITELLM_USAGE_BASE_URL=${LITELLM_USAGE_BASE_URL:-http://litellm:4000}
+      - LITELLM_USAGE_API_KEY=${LITELLM_USAGE_API_KEY:-sk-local-master-key}
+      - LITELLM_USAGE_ENDPOINTS=${LITELLM_USAGE_ENDPOINTS:-/user/daily/activity,/global/spend/report}
+      - LITELLM_USAGE_TIMEOUT_MS=${LITELLM_USAGE_TIMEOUT_MS:-15000}
+      - LITELLM_ADMIN_BASE_URL=${LITELLM_ADMIN_BASE_URL:-http://litellm:4000}
+      - LITELLM_ADMIN_API_KEY=${LITELLM_ADMIN_API_KEY:-sk-local-master-key}
+      - LITELLM_ADMIN_TIMEOUT_MS=${LITELLM_ADMIN_TIMEOUT_MS:-15000}
+      - ADMIN_FORCE_LITELLM_ONLY=${ADMIN_FORCE_LITELLM_ONLY:-true}
+      - SILICONFLOW_API_KEY=${SILICONFLOW_API_KEY:-sk-owlyagtddajzlqjxhxsuwitpnrjvbwkrfqgjgqaspwznnfek}
+      - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY:-sk-292b16fbc7b34cb9b82ec3293aa3717e}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-sk-87ba9837115b4c618b08fd4abfbdf514}
       # SMTP Configuration for Password Reset (163 Email)
       - SMTP_HOST=smtp.163.com
       - SMTP_PORT=465
@@ -30,7 +50,6 @@ services:
       - SMTP_FROM=Context-OS <zysolution@163.com>
     volumes:
       - ./data:/app/data
-      - ./scripts/docker-entrypoint.sh:/app/docker-entrypoint.sh:ro
     depends_on:
       qdrant:
         condition: service_started
@@ -48,12 +67,13 @@ services:
       context: .
       dockerfile: Dockerfile.worker
     container_name: context-os-v3-worker
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
     environment:
       - NODE_ENV=production
       - DATABASE_URL=/app/data/context-os.db
       - QDRANT_URL=http://qdrant:6333
       - LITELLM_BASE_URL=http://litellm:4000
-      - LITELLM_API_KEY=local-dev
+      - LITELLM_API_KEY=${LITELLM_API_KEY:-sk-local-master-key}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
     volumes:
@@ -90,6 +110,26 @@ services:
       - context-os-v3-network
     restart: unless-stopped
 
+  # LiteLLM Postgres (for model management + spend reports)
+  litellm-db:
+    image: postgres:16-alpine
+    container_name: context-os-v3-litellm-db
+    environment:
+      - POSTGRES_USER=${LITELLM_DB_USER:-litellm}
+      - POSTGRES_PASSWORD=${LITELLM_DB_PASSWORD:-litellm}
+      - POSTGRES_DB=${LITELLM_DB_NAME:-litellm}
+    volumes:
+      - litellm_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${LITELLM_DB_USER:-litellm} -d ${LITELLM_DB_NAME:-litellm}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - context-os-v3-network
+    restart: unless-stopped
+
   # LiteLLM Proxy Server
   litellm:
     image: ghcr.io/berriai/litellm:main-latest
@@ -97,7 +137,11 @@ services:
     ports:
       - "127.0.0.1:4410:4000"
     environment:
-      - LITELLM_API_KEY=local-dev
+      - LITELLM_API_KEY=${LITELLM_API_KEY:-sk-local-master-key}
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY:-sk-local-master-key}
+      - LITELLM_SALT_KEY=${LITELLM_SALT_KEY:-sk-local-salt-key-change-in-production}
+      - DATABASE_URL=${LITELLM_DATABASE_URL:-postgresql://litellm:litellm@litellm-db:5432/litellm}
+      - STORE_MODEL_IN_DB=${STORE_MODEL_IN_DB:-true}
       - SILICONFLOW_API_KEY=sk-owlyagtddajzlqjxhxsuwitpnrjvbwkrfqgjgqaspwznnfek
       - SILICONFLOW_BASE_URL=https://api.siliconflow.cn/v1
       - DASHSCOPE_API_KEY=sk-292b16fbc7b34cb9b82ec3293aa3717e
@@ -106,11 +150,14 @@ services:
       - ./litellm-config.yaml:/app/config.yaml
     command: ["--config", "/app/config.yaml", "--port", "4000", "--detailed_debug"]
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:4000/health')\""]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:4000/health/readiness')\""]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    depends_on:
+      litellm-db:
+        condition: service_healthy
     networks:
       - context-os-v3-network
     restart: unless-stopped
@@ -148,3 +195,4 @@ networks:
 volumes:
   qdrant_storage:
   redis_data:
+  litellm_postgres_data:
