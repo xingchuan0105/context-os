@@ -548,8 +548,14 @@ function normalizeLiteLLMProviderModel(input: {
   }
 
   const hasApiBase = Boolean(normalizeString(input.apiBase))
+
+  // 若管理员显式填写了 apiBase，优先尊重输入的模型名，避免对 OpenAI 兼容网关模型
+  // （如 gpt-5-mini / gemini-3-flash-preview）误加 openai/ 前缀导致上游不兼容。
+  if (hasApiBase) {
+    return normalizedModel
+  }
+
   const shouldAutoPrefixOpenAI =
-    hasApiBase ||
     !normalizedModel.includes('/') ||
     /[A-Z]/.test(first)
 
