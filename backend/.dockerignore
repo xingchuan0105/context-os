@@ -83,3 +83,6 @@ test*.pptx
 *.pdf
 *.docx
 *.pptx
+
+venv
+.venv

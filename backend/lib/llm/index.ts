@@ -32,14 +32,23 @@ function resolveEmbeddingModel(model?: string) {
 }
 
 function createClient(options?: Partial<ClientOptions>) {
+  const normalizedBaseUrl = options?.baseURL ? normalizeBaseURL(options.baseURL) : resolveBaseURL()
+
   return new OpenAI({
     apiKey: options?.apiKey || resolveApiKey(),
-    baseURL: normalizeBaseURL(options?.baseURL || resolveBaseURL()),
+    baseURL: normalizedBaseUrl,
+    timeout: options?.timeout,
+    maxRetries: options?.maxRetries,
+    defaultHeaders: options?.defaultHeaders,
   })
 }
 
 type ChatParams = {
   model?: string
+  baseURL?: string
+  apiKey?: string
+  timeout?: number
+  defaultHeaders?: Record<string, string>
   messages: ChatCompletionMessageParam[]
   temperature?: number
   topP?: number
@@ -49,13 +58,17 @@ type ChatParams = {
 
 export async function chat({
   model,
+  baseURL,
+  apiKey,
+  timeout,
+  defaultHeaders,
   messages,
   temperature,
   topP,
   maxTokens,
   responseFormat,
 }: ChatParams): Promise<ChatCompletion> {
-  const client = createClient()
+  const client = createClient({ baseURL, apiKey, timeout, defaultHeaders })
   return client.chat.completions.create({
     model: resolveModel(model),
     messages,
@@ -67,7 +80,12 @@ export async function chat({
 }
 
 export async function chatStream(params: ChatParams) {
-  const client = createClient()
+  const client = createClient({
+    baseURL: params.baseURL,
+    apiKey: params.apiKey,
+    timeout: params.timeout,
+    defaultHeaders: params.defaultHeaders,
+  })
   return client.chat.completions.create({
     model: resolveModel(params.model),
     messages: params.messages,
@@ -83,6 +101,10 @@ type StructuredParams = {
   system?: string
   user: string
   model?: string
+  baseURL?: string
+  apiKey?: string
+  timeout?: number
+  defaultHeaders?: Record<string, string>
   temperature?: number
   maxTokens?: number
 }
@@ -91,10 +113,14 @@ export async function structuredJson({
   system,
   user,
   model,
+  baseURL,
+  apiKey,
+  timeout,
+  defaultHeaders,
   temperature,
   maxTokens,
 }: StructuredParams) {
-  const client = createClient()
+  const client = createClient({ baseURL, apiKey, timeout, defaultHeaders })
   return client.chat.completions.create({
     model: resolveModel(model),
     messages: [
@@ -109,11 +135,15 @@ export async function structuredJson({
 
 type EmbeddingParams = {
   model?: string
+  baseURL?: string
+  apiKey?: string
+  timeout?: number
+  defaultHeaders?: Record<string, string>
   input: string[] | string
 }
 
-export async function embed({ model, input }: EmbeddingParams) {
-  const client = createClient()
+export async function embed({ model, baseURL, apiKey, timeout, defaultHeaders, input }: EmbeddingParams) {
+  const client = createClient({ baseURL, apiKey, timeout, defaultHeaders })
   return client.embeddings.create({
     model: resolveEmbeddingModel(model),
     input,
