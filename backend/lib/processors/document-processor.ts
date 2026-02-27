@@ -4,27 +4,19 @@
  * 完整的文档上传后处理流程：
  * 1. 从 COS 下载文件
  * 2. 解析文件内容
- * 3. K-Type 认知分析
- * 4. 父子分块
- * 5. Embedding 生成
- * 6. 三层写入 Qdrant
+ * 3. semchunk 语义分块并生成稳定 chunk_id
+ * 4. K-Type 认知分析（支持超长分批）
+ * 5. 生成文档级摘要与分块元数据（Agentic 检索使用）
  *
  * @module lib/processors/document-processor
  */
 
 import COS from 'cos-nodejs-sdk-v5'
-import { v4 as uuidv4 } from 'uuid'
 import {
   processKTypeWorkflowEfficient,
   type KTypeProcessResult,
   KTypeSafetyError,
 } from './k-type-efficient-vercel'
-import {
-  splitIntoParentChildChunksBatch,
-  splitIntoParentChildChunksStream,
-} from '../chunkers/parent-child'
-import embeddingClient from '../embedding'
-import { ensureUserCollection, upsertPoints, type VectorPoint } from '../qdrant'
 import {
   updateDocumentStatus,
   updateDocumentKType,
@@ -34,7 +26,7 @@ import { parsePDF } from '../parsers/pdf'
 import { parseDOCX } from '../parsers/docx'
 import { parseTXT } from '../parsers/text'
 import { base64ToBuffer } from '../storage/local'
-import { runSemchunk } from '../semchunk'
+import { estimateTokens, runSemchunk } from '../semchunk'
 import { downloadFileFromCOS } from '../storage/cos'
 import { incrementCounter, recordTiming } from '../observability/metrics'
 import { ENV, parseIntEnv, parseBoolEnv } from '../config/env-helpers'
@@ -50,19 +42,17 @@ const BUCKET = process.env.TENCENT_COS_BUCKET || ''
 const REGION = process.env.TENCENT_COS_REGION || 'ap-guangzhou'
 
 // 使用统一的环境变量解析工具
-const KTYPE_MAX_TOKENS = ENV.KTYPE_MAX_TOKENS
-const DOC_CHUNK_SIZE = ENV.DOC_CHUNK_SIZE
-const DOC_CHUNK_OVERLAP = ENV.DOC_CHUNK_OVERLAP
-const PARENT_CHUNK_SIZE = ENV.PARENT_CHUNK_SIZE
-const PARENT_CHUNK_OVERLAP = parseIntEnv('PARENT_CHUNK_OVERLAP', 240)
-const CHILD_CHUNK_SIZE = parseIntEnv('CHILD_CHUNK_SIZE', 420)
-const CHILD_CHUNK_OVERLAP = parseIntEnv('CHILD_CHUNK_OVERLAP', 100)
+const SUMMARY_SEGMENT_MAX_TOKENS = ENV.SUMMARY_SEGMENT_MAX_TOKENS
+const KTYPE_BATCH_TOKEN_BUDGET = Math.max(1, ENV.KTYPE_MAX_TOKENS)
+const KTYPE_SEMCHUNK_CHUNK_TOKENS = Math.max(
+  1,
+  Math.min(ENV.KTYPE_SEMCHUNK_CHUNK_TOKENS, KTYPE_BATCH_TOKEN_BUDGET),
+)
 const MEMORY_THRESHOLD_MB = parseIntEnv('MEMORY_THRESHOLD_MB', 0)
 const MEMORY_LOG = parseBoolEnv('MEMORY_LOG', false)
 const GC_AFTER_KTYPE = parseBoolEnv('GC_AFTER_KTYPE', false)
 const GC_AFTER_CHUNKING = parseBoolEnv('GC_AFTER_CHUNKING', false)
 const GC_AFTER_EMBEDDING = parseBoolEnv('GC_AFTER_EMBEDDING', false)
-const CHUNK_STREAMING = parseBoolEnv('CHUNK_STREAMING', false)
 
 function logMemoryUsage(stage: string): void {
   if (!MEMORY_LOG) return
@@ -90,29 +80,93 @@ function maybeForceGc(stage: string, force = false): void {
   logMemoryUsage(`${stage}-after-gc`)
 }
 
-function splitTextByLength(text: string, chunkSize: number, overlap: number): string[] {
-  if (!text) return []
-  if (chunkSize <= 0 || text.length <= chunkSize) return [text]
-  const safeOverlap = Math.max(0, overlap)
-  const step = Math.max(1, chunkSize - safeOverlap)
-  const chunks: string[] = []
-
-  for (let start = 0; start < text.length; start += step) {
-    const end = Math.min(text.length, start + chunkSize)
-    const chunk = text.slice(start, end)
-    if (chunk.trim()) {
-      chunks.push(chunk)
-    }
-    if (end >= text.length) break
-  }
-
-  return chunks.length > 0 ? chunks : [text]
-}
-
 function buildKTypeDocText(report: KTypeProcessResult['finalReport']): string {
   const fullReport = (report.distilledContent || '').trim()
   if (fullReport) return fullReport
   return (report.executiveSummary || '').trim()
+}
+
+function splitSummarySegmentsByWindow(text: string, maxTokensPerSegment: number): string[] {
+  const normalizedText = text.trim()
+  if (!normalizedText) return []
+  const tokenBudget = Math.max(1000, maxTokensPerSegment)
+  const totalTokens = estimateTokens(normalizedText)
+  const partCount = Math.max(1, Math.ceil(totalTokens / tokenBudget))
+  if (partCount <= 1) return [normalizedText]
+
+  const targetChars = Math.ceil(normalizedText.length / partCount)
+  const parts: string[] = []
+  let cursor = 0
+
+  for (let i = 0; i < partCount && cursor < normalizedText.length; i += 1) {
+    if (i === partCount - 1) {
+      const tail = normalizedText.slice(cursor).trim()
+      if (tail) parts.push(tail)
+      break
+    }
+
+    const preferredEnd = Math.min(normalizedText.length, cursor + targetChars)
+    const windowStart = Math.max(cursor + Math.floor(targetChars * 0.7), cursor + 1)
+    const windowEnd = Math.min(normalizedText.length, cursor + Math.floor(targetChars * 1.3))
+    let splitAt = preferredEnd
+
+    for (let p = preferredEnd; p >= windowStart; p -= 1) {
+      const ch = normalizedText[p]
+      if (ch === '\n' || ch === '。' || ch === '！' || ch === '？' || ch === ';' || ch === '.') {
+        splitAt = p + 1
+        break
+      }
+    }
+
+    if (splitAt === preferredEnd) {
+      for (let p = preferredEnd; p <= windowEnd; p += 1) {
+        const ch = normalizedText[p]
+        if (ch === '\n' || ch === '。' || ch === '！' || ch === '？' || ch === ';' || ch === '.') {
+          splitAt = p + 1
+          break
+        }
+      }
+    }
+
+    const chunk = normalizedText.slice(cursor, splitAt).trim()
+    if (chunk) {
+      parts.push(chunk)
+    }
+    cursor = Math.max(splitAt, cursor + 1)
+  }
+
+  return parts.length > 0 ? parts : [normalizedText]
+}
+
+type SemanticChunkCard = {
+  chunkId: string
+  content: string
+  tokenCount: number
+}
+
+function toSemanticChunkId(index: number): string {
+  return `c${String(index + 1).padStart(4, '0')}`
+}
+
+async function buildSemanticChunkCards(text: string): Promise<SemanticChunkCard[]> {
+  const normalized = text.trim()
+  if (!normalized) return []
+  let chunks: string[] = []
+  try {
+    chunks = (await runSemchunk({ text: normalized }, KTYPE_SEMCHUNK_CHUNK_TOKENS)) as string[]
+  } catch (error) {
+    console.warn('⚠️  [Processor] semchunk 语义分块失败，fallback 为单块:', error)
+    chunks = [normalized]
+  }
+
+  return chunks
+    .map((content) => content.trim())
+    .filter(Boolean)
+    .map((content, index) => ({
+      chunkId: toSemanticChunkId(index),
+      content,
+      tokenCount: estimateTokens(content),
+    }))
 }
 
 // ==================== 类型定义 ====================
@@ -120,14 +174,6 @@ function buildKTypeDocText(report: KTypeProcessResult['finalReport']): string {
 export interface ProcessingOptions {
   // K-Type 分析选项
   skipKType?: boolean
-
-  // 分块选项
-  docChunkSize?: number
-  docChunkOverlap?: number
-  parentChunkSize?: number
-  parentChunkOverlap?: number
-  childChunkSize?: number
-  childChunkOverlap?: number
 
   // Embedding 选项
   embeddingBatchSize?: number
@@ -178,13 +224,6 @@ async function processDocumentCore(
 ): Promise<ProcessingResult> {
   const {
     skipKType = false,
-    docChunkSize = DOC_CHUNK_SIZE,
-    docChunkOverlap = DOC_CHUNK_OVERLAP,
-    parentChunkSize = PARENT_CHUNK_SIZE,
-    parentChunkOverlap = PARENT_CHUNK_OVERLAP,
-    childChunkSize = CHILD_CHUNK_SIZE,
-    childChunkOverlap = CHILD_CHUNK_OVERLAP,
-    embeddingBatchSize = 10,
   } = options
 
   try {
@@ -193,6 +232,7 @@ async function processDocumentCore(
 
     // 1. K-Type 分析
     const ktypeResults: KTypeProcessResult[] = []
+    let ktypeInputs: string[] = []
     if (!skipKType) {
       onProgress?.({
         documentId: document.id,
@@ -202,13 +242,11 @@ async function processDocumentCore(
       })
 
       try {
-        const ktypeInputs = (await runSemchunk({ text: textContent }, KTYPE_MAX_TOKENS)) as string[]
-        for (const part of ktypeInputs) {
-          const result = await processKTypeWorkflowEfficient(part)
-          ktypeResults.push(result)
-        }
+        ktypeInputs = [textContent]
+        const result = await processKTypeWorkflowEfficient(textContent)
+        ktypeResults.push(result)
         if (ktypeResults.length > 0) {
-          console.log(`✅ [Processor] K-Type 分析完成 (${ktypeResults.length} parts)`)
+          console.log(`✅ [Processor] K-Type 分析完成`)
           console.log(
             `   主导类型: ${ktypeResults[0].finalReport.classification.dominantType.join(', ')}`
           )
@@ -220,100 +258,40 @@ async function processDocumentCore(
           throw error
         }
         console.warn(`⚠️  [Processor] K-Type 分析失败，使用回退策略:`, error)
-        try {
-          const result = await processKTypeWorkflowEfficient(textContent)
-          ktypeResults.push(result)
-        } catch (fallbackError) {
-          if (fallbackError instanceof KTypeSafetyError) {
-            throw fallbackError
-          }
-          console.error(`❌ [Processor] K-Type 回退失败:`, fallbackError)
-          throw new Error(`K-Type 分析失败: ${fallbackError instanceof Error ? fallbackError.message : String(fallbackError)}`)
-        }
+        throw new Error(`K-Type 分析失败: ${error instanceof Error ? error.message : String(error)}`)
       }
     }
 
     logMemoryUsage('after-ktype')
     maybeForceGc('after-ktype', GC_AFTER_KTYPE)
 
-    // 2. 分块 (semchunk)
-    const useChunkStreaming = CHUNK_STREAMING
+    // 2. 分块
     onProgress?.({
       documentId: document.id,
       status: 'chunking',
       progress: startProgress + 40,
-      message: useChunkStreaming ? '分块处理中(流式)...' : '分块处理中...',
+      message: '分块处理中...',
     })
 
-    let parentChunks: Array<{ index: number; content: string }> = []
-    let childChunks: Array<{ index: number; parentIndex: number; content: string }> = []
+    let semanticChunkCards: SemanticChunkCard[] = []
     let parentChunkCount = 0
     let childChunkCount = 0
-    let chunkStream: AsyncIterable<{
-      parentChunks: Array<{ index: number; content: string }>
-      childChunks: Array<{ index: number; parentIndex: number; content: string }>
-    }> | null = null
 
-    if (!useChunkStreaming) {
-      try {
-        const parentTexts = (await runSemchunk(
-          { text: textContent },
-          parentChunkSize,
-          parentChunkOverlap
-        )) as string[]
-
-        const childLists = (await runSemchunk(
-          { texts: parentTexts },
-          childChunkSize,
-          childChunkOverlap
-        )) as string[][]
-
-        parentChunks = parentTexts.map((content, index) => ({ index, content }))
-        let childIndex = 0
-        for (let i = 0; i < childLists.length; i++) {
-          for (const child of childLists[i] || []) {
-            childChunks.push({ index: childIndex++, parentIndex: i, content: child })
-          }
-        }
-      } catch (error) {
-        console.warn('⚠️  [Processor] semchunk 分块失败，使用 fallback:', error)
-        const fallback = await splitIntoParentChildChunksBatch(textContent, {
-          parentChunkSize,
-          parentChunkOverlap,
-          childChunkSize,
-          childChunkOverlap,
-        })
-        parentChunks = fallback.parentChunks
-        childChunks = fallback.childChunks
-      }
-
-      parentChunkCount = parentChunks.length
-      childChunkCount = childChunks.length
-      console.log(
-        `✅ [Processor] 分块完成: ${parentChunks.length} 父块, ${childChunks.length} 子块`
-      )
-    } else {
-      console.log('📦 [Processor] 分块将使用流式模式')
-      chunkStream = splitIntoParentChildChunksStream(textContent, {
-        parentChunkSize,
-        parentChunkOverlap,
-        childChunkSize,
-        childChunkOverlap,
-      })
-    }
+    semanticChunkCards = await buildSemanticChunkCards(textContent)
+    parentChunkCount = semanticChunkCards.length
+    childChunkCount = semanticChunkCards.length
+    console.log(`✅ [Processor] 语义分块完成: ${semanticChunkCards.length} 块`)
 
     logMemoryUsage('after-chunking')
     maybeForceGc('after-chunking', GC_AFTER_CHUNKING)
 
-    // 3. Embedding + Qdrant 写入
+    // 3. Agentic 模式不做向量化写入，仅保留处理阶段用于兼容旧进度状态。
     onProgress?.({
       documentId: document.id,
       status: 'embedding',
       progress: startProgress + 50,
-      message: '生成向量并写入数据库...',
+      message: 'Agentic 模式：跳过向量化写入',
     })
-
-    const embeddingStartTime = Date.now()
 
     const combinedKTypeText = ktypeResults.length
       ? ktypeResults
@@ -321,185 +299,43 @@ async function processDocumentCore(
           .filter(Boolean)
           .join('\n\n')
       : ''
+    const summarySegments = ktypeResults.length
+      ? ktypeResults.map((result, index) => {
+          const summary = buildKTypeDocText(result.finalReport)
+          return {
+            index,
+            summary,
+            sourceTokens: estimateTokens(ktypeInputs[index] || ''),
+            summaryTokens: estimateTokens(summary),
+          }
+        })
+      : splitSummarySegmentsByWindow(textContent, SUMMARY_SEGMENT_MAX_TOKENS).map((segment, index) => ({
+          index,
+          summary: segment,
+          sourceTokens: estimateTokens(segment),
+          summaryTokens: estimateTokens(segment),
+        }))
 
-    const deepSummary = combinedKTypeText
+    const summaryGlobal =
+      combinedKTypeText.trim() ||
+      summarySegments.map((segment) => segment.summary).filter(Boolean).join('\n\n') ||
+      textContent.slice(0, 20000)
 
-    const docChunks: Array<{ content: string; report?: KTypeProcessResult['finalReport'] }> = []
+    const deepSummary = summaryGlobal
 
-    if (combinedKTypeText.trim()) {
-      docChunks.push({ content: combinedKTypeText, report: ktypeResults[0]?.finalReport })
-    } else if (textContent.trim()) {
-      docChunks.push({ content: textContent })
+    const summarySegmentsPayload = {
+      schema: 'agentic_semchunk_v1',
+      summary_batches: summarySegments,
+      semantic_chunks: semanticChunkCards.map((item) => ({
+        chunk_id: item.chunkId,
+        content: item.content,
+        token_count: item.tokenCount,
+      })),
     }
 
-    if (docChunks.length === 0 && textContent) {
-      docChunks.push({ content: textContent })
-    }
-
-
-    const totalEmbedTexts = useChunkStreaming
-      ? 0
-      : docChunks.length + parentChunks.length + childChunks.length
-    const embeddingModel = process.env.EMBEDDING_MODEL || 'qwen3-embedding-4b'
-    let processedCount = 0
-
-    await ensureUserCollection(document.user_id)
-
-    const embedAndUpsert = async <T>(
-      items: T[],
-      getText: (item: T) => string,
-      buildPoint: (item: T, index: number, vector: number[]) => VectorPoint
-    ) => {
-      for (let i = 0; i < items.length; i += embeddingBatchSize) {
-        const batchItems = items.slice(i, i + embeddingBatchSize)
-        const batchTexts = batchItems.map(getText)
-
-        const response = await (embeddingClient as any).embeddings.create({
-          model: embeddingModel,
-          input: batchTexts,
-        })
-
-        const points = response.data.map((d: any, idx: number) =>
-          buildPoint(batchItems[idx], i + idx, d.embedding)
-        )
-
-        await upsertPoints(document.user_id, points)
-
-        processedCount += batchItems.length
-        const progressIncrement =
-          totalEmbedTexts > 0 ? Math.floor((processedCount / totalEmbedTexts) * 40) : 0
-        onProgress?.({
-          documentId: document.id,
-          status: 'embedding',
-          progress: startProgress + 50 + progressIncrement,
-          message:
-            totalEmbedTexts > 0
-              ? `向量化进度: ${processedCount}/${totalEmbedTexts}`
-              : `向量化进度: ${processedCount}`,
-        })
-      }
-    }
-
-    await embedAndUpsert(
-      docChunks,
-      (docChunk) => docChunk.content,
-      (docChunk, index, vector) => ({
-        id: uuidv4(),
-        vector,
-        payload: {
-          doc_id: document.id,
-          kb_id: document.kb_id,
-          user_id: document.user_id,
-          type: 'document',
-          content: docChunk.content,
-          chunk_index: index,
-          metadata: {
-            file_name: document.file_name,
-          },
-        },
-      })
-    )
-
-    if (!useChunkStreaming) {
-      await embedAndUpsert(
-        parentChunks,
-        (parentChunk) => parentChunk.content,
-        (parentChunk, _index, vector) => ({
-          id: uuidv4(),
-          vector,
-          payload: {
-            doc_id: document.id,
-            kb_id: document.kb_id,
-            user_id: document.user_id,
-            type: 'parent',
-            content: parentChunk.content,
-            chunk_index: parentChunk.index,
-            metadata: {
-              file_name: document.file_name,
-            },
-          },
-        })
-      )
-
-      await embedAndUpsert(
-        childChunks,
-        (childChunk) => childChunk.content,
-        (childChunk, _index, vector) => ({
-          id: uuidv4(),
-          vector,
-          payload: {
-            doc_id: document.id,
-            kb_id: document.kb_id,
-            user_id: document.user_id,
-            type: 'child',
-            parent_id: `parent_${document.id}_${childChunk.parentIndex}`,
-            content: childChunk.content,
-            chunk_index: childChunk.index,
-            metadata: {
-              file_name: document.file_name,
-              parent_index: childChunk.parentIndex,
-            },
-          },
-        })
-      )
-    } else if (chunkStream) {
-      for await (const batch of chunkStream) {
-        if (batch.parentChunks.length > 0) {
-          parentChunkCount += batch.parentChunks.length
-          await embedAndUpsert(
-            batch.parentChunks,
-            (parentChunk) => parentChunk.content,
-            (parentChunk, _index, vector) => ({
-              id: uuidv4(),
-              vector,
-              payload: {
-                doc_id: document.id,
-                kb_id: document.kb_id,
-                user_id: document.user_id,
-                type: 'parent',
-                content: parentChunk.content,
-                chunk_index: parentChunk.index,
-                metadata: {
-                  file_name: document.file_name,
-                },
-              },
-            })
-          )
-        }
-
-        if (batch.childChunks.length > 0) {
-          childChunkCount += batch.childChunks.length
-          await embedAndUpsert(
-            batch.childChunks,
-            (childChunk) => childChunk.content,
-            (childChunk, _index, vector) => ({
-              id: uuidv4(),
-              vector,
-              payload: {
-                doc_id: document.id,
-                kb_id: document.kb_id,
-                user_id: document.user_id,
-                type: 'child',
-                parent_id: `parent_${document.id}_${childChunk.parentIndex}`,
-                content: childChunk.content,
-                chunk_index: childChunk.index,
-                metadata: {
-                  file_name: document.file_name,
-                  parent_index: childChunk.parentIndex,
-                },
-              },
-            })
-          )
-        }
-      }
-
-      console.log(`✅ [Processor] 分块完成: ${parentChunkCount} 父块, ${childChunkCount} 子块`)
-    }
-
-    const totalPoints = docChunks.length + parentChunkCount + childChunkCount
-    const embeddingTime = Date.now() - embeddingStartTime
+    const embeddingTime = 0
     recordTiming('embedding', embeddingTime)
-    console.log(`✅ [Processor] 向量化完成: 耗时 ${(embeddingTime / 1000).toFixed(2)}s, ${totalPoints} 个向量点`)
+    console.log('✅ [Processor] Agentic 模式已跳过向量化与 Qdrant 写入')
 
     logMemoryUsage('after-embedding')
     maybeForceGc('after-embedding', GC_AFTER_EMBEDDING)
@@ -510,7 +346,11 @@ async function processDocumentCore(
       combinedKTypeText,
       JSON.stringify(ktypeResults.map((r) => r.finalReport)),
       deepSummary,
-      childChunkCount
+      semanticChunkCards.length,
+      {
+        summaryGlobal,
+        summarySegmentsJson: JSON.stringify(summarySegmentsPayload),
+      },
     )
 
     onProgress?.({

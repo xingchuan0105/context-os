@@ -24,6 +24,8 @@ export interface ModelConfig {
   model: string
   timeout?: number
   apiKey?: string
+  baseURL?: string
+  defaultHeaders?: Record<string, string>
 }
 
 export function getModelConfigs(): Record<string, ModelConfig> {
@@ -37,6 +39,7 @@ export function getModelConfigs(): Record<string, ModelConfig> {
     model: envKey ? process.env[envKey] || model : model,
     timeout,
     apiKey: process.env.LITELLM_API_KEY || undefined,
+    baseURL: process.env.LITELLM_BASE_URL || undefined,
   })
 
   const models: Record<string, { model: string; envKey?: string; name?: string }> = {
@@ -78,6 +81,8 @@ export function getModelConfigs(): Record<string, ModelConfig> {
   }
 
   const aliases: Record<string, string> = {
+    qwen3_max: 'qwen_max',
+    qwen3_flash: 'qwen_flash',
     litellm: 'default',
     litellm_deepseek_chat: 'deepseek_chat',
     litellm_deepseek: 'deepseek_chat',
@@ -108,6 +113,30 @@ export function getModelConfigs(): Record<string, ModelConfig> {
 
 export const MODEL_CONFIGS = getModelConfigs()
 
+function normalizeModelKey(modelKey: string): string {
+  return modelKey.trim().toLowerCase().replace(/[\s-]+/g, '_')
+}
+
+function resolveModelConfig(configs: Record<string, ModelConfig>, modelKey: string): ModelConfig {
+  const raw = modelKey.trim()
+  if (raw && configs[raw]) return configs[raw]
+
+  const normalized = normalizeModelKey(raw)
+  if (normalized && configs[normalized]) return configs[normalized]
+
+  // Fallback: treat unknown model key as direct model id instead of silently
+  // dropping to default deepseek model, which can cause hard-to-debug failures.
+  if (raw) {
+    return {
+      ...configs.default,
+      name: `LiteLLM - ${raw} (dynamic)`,
+      model: raw,
+    }
+  }
+
+  return configs.default
+}
+
 const RATE_LIMIT_PATTERNS = [
   'rate limit',
   'rate_limit',
@@ -132,7 +161,16 @@ export class LLMClient {
 
   constructor(config: ModelConfig) {
     this.config = config
-    this.client = createClient({ timeout: config.timeout || 5 * 60 * 1000, maxRetries: 0, defaultHeaders: { 'User-Agent': 'Context-OS/1.0' } }) as any
+    this.client = createClient({
+      apiKey: config.apiKey,
+      baseURL: config.baseURL,
+      timeout: config.timeout || 5 * 60 * 1000,
+      maxRetries: 0,
+      defaultHeaders: {
+        'User-Agent': 'Context-OS/1.0',
+        ...(config.defaultHeaders || {}),
+      },
+    }) as any
   }
 
   async chat(
@@ -265,10 +303,35 @@ export class LLMClient {
 
 export function createLLMClient(modelKey: keyof typeof MODEL_CONFIGS | string = 'default'): LLMClient {
   const configs = getModelConfigs()
-  const config = configs[modelKey] || configs.default
+  const config = resolveModelConfig(configs, String(modelKey))
 
   if (!config.apiKey) {
     throw new Error('Missing LITELLM_API_KEY or model API key configuration.')
+  }
+
+  return new LLMClient(config)
+}
+
+export type LLMClientOverrides = Partial<
+  Pick<ModelConfig, 'name' | 'model' | 'timeout' | 'apiKey' | 'baseURL' | 'defaultHeaders'>
+>
+
+export function createLLMClientWithOverrides(
+  modelKey: keyof typeof MODEL_CONFIGS | string = 'default',
+  overrides: LLMClientOverrides = {}
+): LLMClient {
+  const configs = getModelConfigs()
+  const baseConfig = resolveModelConfig(configs, String(modelKey))
+  const sanitizedOverrides = Object.fromEntries(
+    Object.entries(overrides).filter(([, value]) => value !== undefined)
+  ) as LLMClientOverrides
+  const config: ModelConfig = {
+    ...baseConfig,
+    ...sanitizedOverrides,
+  }
+
+  if (!config.apiKey) {
+    throw new Error(`Missing API key for model "${modelKey}"`)
   }
 
   return new LLMClient(config)
